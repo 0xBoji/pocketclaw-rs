@@ -13,10 +13,9 @@ authors = ["Picoclaw Contributors"]
 license = "MIT"
 
 [profile.release]
-opt-level = "z"      # Optimize for size
+opt-level = "s"      # Optimize for size (but less aggressive than "z")
 lto = true           # Link Time Optimization
 codegen-units = 1    # Reduce parallel codegen for better optimization
-panic = "abort"      # Remove panic unwinding (smaller binary)
 strip = true         # Strip symbols
 debug = false        # No debug info
 
