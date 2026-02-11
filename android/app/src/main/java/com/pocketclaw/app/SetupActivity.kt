@@ -28,7 +28,7 @@ class SetupActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
-        // Title
+        // ─── Title ───
         layout.addView(TextView(this).apply {
             text = "🦞 PocketClaw Setup"
             textSize = 28f
@@ -46,7 +46,9 @@ class SetupActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 48)
         })
 
-        // Provider Selector
+        // ─── Section: AI Provider (Required) ───
+        layout.addView(createSectionHeader("🤖 AI Provider (Required)"))
+
         layout.addView(createLabel("Provider"))
         val providerSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
@@ -59,20 +61,17 @@ class SetupActivity : AppCompatActivity() {
         layout.addView(providerSpinner)
         layout.addView(createSpacer())
 
-        // API Key
         layout.addView(createLabel("API Key"))
         val apiKeyInput = createInput("sk-xxxxxxxxxxxxxxx", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         layout.addView(apiKeyInput)
         layout.addView(createSpacer())
 
-        // Model
         layout.addView(createLabel("Model"))
         val modelInput = createInput("gpt-4o-mini")
         layout.addView(modelInput)
         layout.addView(createSpacer())
 
-        // System Prompt
-        layout.addView(createLabel("System Prompt (optional)"))
+        layout.addView(createLabel("System Prompt"))
         val promptInput = createInput("You are a helpful AI assistant.", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE).apply {
             minLines = 3
             gravity = Gravity.TOP or Gravity.START
@@ -80,9 +79,36 @@ class SetupActivity : AppCompatActivity() {
         layout.addView(promptInput)
         layout.addView(createSpacer())
 
-        // Save Button
+        // ─── Section: Telegram (Optional) ───
+        layout.addView(createSectionHeader("📱 Telegram Bot (Optional)"))
+
+        layout.addView(createLabel("Bot Token"))
+        val telegramInput = createInput("123456:ABC-DEF1234...", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        layout.addView(telegramInput)
+        layout.addView(createHint("Get from @BotFather on Telegram"))
+        layout.addView(createSpacer())
+
+        // ─── Section: Discord (Optional) ───
+        layout.addView(createSectionHeader("💬 Discord Bot (Optional)"))
+
+        layout.addView(createLabel("Bot Token"))
+        val discordInput = createInput("MTk1Njc5...", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        layout.addView(discordInput)
+        layout.addView(createHint("Get from Discord Developer Portal"))
+        layout.addView(createSpacer())
+
+        // ─── Section: Web Search (Optional) ───
+        layout.addView(createSectionHeader("🔍 Web Search (Optional)"))
+
+        layout.addView(createLabel("Brave Search API Key"))
+        val braveKeyInput = createInput("BSA...", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        layout.addView(braveKeyInput)
+        layout.addView(createHint("Get from brave.com/search/api"))
+        layout.addView(createSpacer())
+
+        // ─── Save Button ───
         val saveButton = Button(this).apply {
-            text = "Save & Start"
+            text = "💾  Save & Start"
             textSize = 18f
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.parseColor("#e94560"))
@@ -92,6 +118,9 @@ class SetupActivity : AppCompatActivity() {
                 val apiKey = apiKeyInput.text.toString().trim()
                 val model = modelInput.text.toString().trim()
                 val prompt = promptInput.text.toString().trim()
+                val telegramToken = telegramInput.text.toString().trim()
+                val discordToken = discordInput.text.toString().trim()
+                val braveKey = braveKeyInput.text.toString().trim()
 
                 if (apiKey.isEmpty()) {
                     Toast.makeText(this@SetupActivity, "API Key is required!", Toast.LENGTH_SHORT).show()
@@ -102,7 +131,15 @@ class SetupActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                saveConfig(provider, apiKey, model, prompt.ifEmpty { "You are a helpful AI assistant." })
+                saveConfig(
+                    provider = provider,
+                    apiKey = apiKey,
+                    model = model,
+                    systemPrompt = prompt.ifEmpty { "You are a helpful AI assistant." },
+                    telegramToken = telegramToken,
+                    discordToken = discordToken,
+                    braveKey = braveKey
+                )
                 Toast.makeText(this@SetupActivity, "Config saved! Starting agent...", Toast.LENGTH_SHORT).show()
 
                 startActivity(Intent(this@SetupActivity, MainActivity::class.java))
@@ -115,6 +152,16 @@ class SetupActivity : AppCompatActivity() {
         setContentView(scrollView)
     }
 
+    private fun createSectionHeader(text: String): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 20f
+            setTextColor(Color.WHITE)
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(0, 32, 0, 16)
+        }
+    }
+
     private fun createLabel(text: String): TextView {
         return TextView(this).apply {
             this.text = text
@@ -122,6 +169,15 @@ class SetupActivity : AppCompatActivity() {
             setTextColor(Color.parseColor("#e94560"))
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, 0, 0, 8)
+        }
+    }
+
+    private fun createHint(text: String): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 12f
+            setTextColor(Color.parseColor("#666666"))
+            setPadding(0, 4, 0, 0)
         }
     }
 
@@ -149,7 +205,15 @@ class SetupActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveConfig(provider: String, apiKey: String, model: String, systemPrompt: String) {
+    private fun saveConfig(
+        provider: String,
+        apiKey: String,
+        model: String,
+        systemPrompt: String,
+        telegramToken: String,
+        discordToken: String,
+        braveKey: String
+    ) {
         val configDir = File(filesDir, ".pocketclaw")
         if (!configDir.exists()) configDir.mkdirs()
 
@@ -178,6 +242,27 @@ class SetupActivity : AppCompatActivity() {
             put("workspace", workspaceDir.absolutePath)
             put("providers", providersObj)
             put("agents", agentsObj)
+
+            // Telegram (optional)
+            if (telegramToken.isNotEmpty()) {
+                put("telegram", JSONObject().apply {
+                    put("token", telegramToken)
+                })
+            }
+
+            // Discord (optional)
+            if (discordToken.isNotEmpty()) {
+                put("discord", JSONObject().apply {
+                    put("token", discordToken)
+                })
+            }
+
+            // Web / Brave Search (optional)
+            if (braveKey.isNotEmpty()) {
+                put("web", JSONObject().apply {
+                    put("brave_key", braveKey)
+                })
+            }
         }
 
         val configFile = File(configDir, "config.json")
