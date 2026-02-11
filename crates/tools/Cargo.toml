@@ -15,4 +15,4 @@ thiserror.workspace = true
 anyhow.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
-readability = "0.3.0"
+regex.workspace = true
