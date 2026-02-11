@@ -1,8 +1,8 @@
-# Microclaw
+# PocketClaw
 
 Ultra-lightweight personal AI assistant written in Rust.
 
-Microclaw is a modular, terminal-first AI agent that connects to multiple LLM providers and messaging platforms. It supports tools, skills, scheduled tasks, and voice transcription out of the box.
+PocketClaw is a modular, terminal-first AI agent that connects to multiple LLM providers and messaging platforms. It supports tools, skills, scheduled tasks, and voice transcription out of the box.
 
 ## Requirements
 
