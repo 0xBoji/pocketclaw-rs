@@ -1,5 +1,5 @@
 [package]
-name = "microclaw-cron"
+name = "pocketclaw-cron"
 version = "0.1.0"
 edition = "2021"
 

@@ -2,7 +2,7 @@ pub mod google;
 pub mod anthropic;
 pub mod openai;
 use async_trait::async_trait;
-use microclaw_core::types::Message;
+use pocketclaw_core::types::Message;
 
 use thiserror::Error;
 

@@ -1,27 +1,27 @@
 [package]
-name = "microclaw-cli"
+name = "pocketclaw-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-microclaw-core = { workspace = true }
-microclaw-agent = { workspace = true }
-microclaw-server = { workspace = true }
-microclaw-skills = { workspace = true }
+pocketclaw-core = { workspace = true }
+pocketclaw-agent = { workspace = true }
+pocketclaw-server = { workspace = true }
+pocketclaw-skills = { workspace = true }
 clap.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 anyhow.workspace = true
-microclaw-providers.workspace = true
-microclaw-tools.workspace = true
-microclaw-telegram = { version = "0.1.0", path = "../telegram" }
-microclaw-discord = { version = "0.1.0", path = "../discord" }
+pocketclaw-providers.workspace = true
+pocketclaw-tools.workspace = true
+pocketclaw-telegram = { version = "0.1.0", path = "../telegram" }
+pocketclaw-discord = { version = "0.1.0", path = "../discord" }
 inquire = "0.9.3"
 dirs = "6.0.0"
 serde_json.workspace = true
-microclaw-cron = { workspace = true }
-microclaw-voice = { workspace = true }
-microclaw-heartbeat = { workspace = true }
+pocketclaw-cron = { workspace = true }
+pocketclaw-voice = { workspace = true }
+pocketclaw-heartbeat = { workspace = true }

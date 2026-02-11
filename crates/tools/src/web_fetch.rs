@@ -14,7 +14,7 @@ impl WebFetchTool {
     pub fn new() -> Self {
         Self {
             client: Client::builder()
-                .user_agent("Microclaw/1.0")
+                .user_agent("PocketClaw/1.0")
                 .build()
                 .unwrap_or_default(),
         }

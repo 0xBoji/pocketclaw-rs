@@ -1,5 +1,5 @@
 [package]
-name = "microclaw-core"
+name = "pocketclaw-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -1,12 +1,12 @@
 [package]
-name = "microclaw-telegram"
+name = "pocketclaw-telegram"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-microclaw-core = { path = "../core" }
+pocketclaw-core = { path = "../core" }
 tokio = { workspace = true }
 tracing = { workspace = true }
-teloxide = { version = "0.12", features = ["macros"] }
+teloxide = { version = "0.12", default-features = false, features = ["macros", "rustls", "ctrlc_handler"] }
 anyhow = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

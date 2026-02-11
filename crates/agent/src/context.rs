@@ -1,5 +1,5 @@
-use microclaw_core::types::{Message, Role};
-use microclaw_skills::SkillsLoader;
+use pocketclaw_core::types::{Message, Role};
+use pocketclaw_skills::SkillsLoader;
 use std::path::PathBuf;
 
 pub struct ContextBuilder {
@@ -51,7 +51,7 @@ impl ContextBuilder {
     }
 
     fn build_system_prompt(&self) -> String {
-        let mut prompt = String::from("You are Microclaw, an intelligent AI assistant.\n");
+        let mut prompt = String::from("You are PocketClaw, an intelligent AI assistant.\n");
         prompt.push_str("You must answer the user's request accurately and concisely.\n");
         prompt.push_str("If you need to perform actions, use the provided tools.\n");
 

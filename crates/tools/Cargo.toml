@@ -1,12 +1,12 @@
 [package]
-name = "microclaw-tools"
+name = "pocketclaw-tools"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-microclaw-core = { workspace = true }
+pocketclaw-core = { workspace = true }
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true

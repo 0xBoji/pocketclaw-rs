@@ -1,5 +1,5 @@
 [package]
-name = "microclaw-heartbeat"
+name = "pocketclaw-heartbeat"
 version = "0.1.0"
 edition = "2021"
 

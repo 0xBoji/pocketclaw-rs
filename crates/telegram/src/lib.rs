@@ -1,5 +1,5 @@
-use microclaw_core::bus::{Event, MessageBus};
-use microclaw_core::types::{Message, Role};
+use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::types::{Message, Role};
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{ChatAction, ParseMode};

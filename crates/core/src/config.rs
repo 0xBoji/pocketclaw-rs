@@ -74,13 +74,17 @@ pub struct AnthropicConfig {
 }
 
 impl AppConfig {
-    pub fn load() -> Result<Self, ConfigError> {
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        let config_path = PathBuf::from(home).join(".microclaw/config.json");
+    pub fn load(custom_path: Option<PathBuf>) -> Result<Self, ConfigError> {
+        let config_path = if let Some(path) = custom_path {
+            path
+        } else {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            PathBuf::from(home).join(".pocketclaw/config.json")
+        };
 
         let s = Config::builder()
-            .add_source(File::from(config_path).required(false))
-            // Add environment variables (MICROCLAW_...)
+            .add_source(File::from(config_path).required(true))
+            // Add environment variables (POCKETCLAW_...)
             .build()?;
 
         s.try_deserialize()

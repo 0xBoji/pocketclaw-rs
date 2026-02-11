@@ -1,24 +1,24 @@
 use clap::{Parser, Subcommand};
-use microclaw_agent::agent_loop::AgentLoop;
-use microclaw_agent::context::ContextBuilder;
-use microclaw_agent::session::SessionManager;
-use microclaw_core::bus::{Event, MessageBus};
-use microclaw_core::config::AppConfig;
-use microclaw_core::types::{Message, Role};
-use microclaw_cron::{CronSchedule, CronService};
-use microclaw_heartbeat::HeartbeatService;
-use microclaw_providers::anthropic::AnthropicProvider;
-use microclaw_providers::google::GoogleProvider;
-use microclaw_providers::openai::OpenAIProvider;
-use microclaw_providers::LLMProvider;
-use microclaw_server::gateway::Gateway;
-use microclaw_telegram::TelegramBot;
-use microclaw_discord::DiscordBot;
-use microclaw_tools::exec_tool::ExecTool;
-use microclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
-use microclaw_tools::registry::ToolRegistry;
-use microclaw_tools::web_fetch::WebFetchTool;
-use microclaw_tools::web_search::WebSearchTool;
+use pocketclaw_agent::agent_loop::AgentLoop;
+use pocketclaw_agent::context::ContextBuilder;
+use pocketclaw_agent::session::SessionManager;
+use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::config::AppConfig;
+use pocketclaw_core::types::{Message, Role};
+use pocketclaw_cron::{CronSchedule, CronService};
+use pocketclaw_heartbeat::HeartbeatService;
+use pocketclaw_providers::anthropic::AnthropicProvider;
+use pocketclaw_providers::google::GoogleProvider;
+use pocketclaw_providers::openai::OpenAIProvider;
+use pocketclaw_providers::LLMProvider;
+use pocketclaw_server::gateway::Gateway;
+use pocketclaw_telegram::TelegramBot;
+use pocketclaw_discord::DiscordBot;
+use pocketclaw_tools::exec_tool::ExecTool;
+use pocketclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
+use pocketclaw_tools::registry::ToolRegistry;
+use pocketclaw_tools::web_fetch::WebFetchTool;
+use pocketclaw_tools::web_search::WebSearchTool;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{error, info, Level};
@@ -27,7 +27,7 @@ use tracing_subscriber::FmtSubscriber;
 const VERSION: &str = "0.1.0";
 
 #[derive(Parser)]
-#[command(name = "microclaw")]
+#[command(name = "pocketclaw")]
 #[command(version = VERSION)]
 #[command(about = "🦞 Ultra-lightweight personal AI assistant in Rust")]
 struct Cli {
@@ -46,7 +46,7 @@ enum Commands {
     Gateway,
     /// Run the onboarding wizard
     Onboard,
-    /// Show microclaw status
+    /// Show pocketclaw status
     Status,
     /// Manage scheduled tasks
     Cron {
@@ -114,7 +114,7 @@ enum SkillsActions {
 mod onboard;
 
 fn get_config_dir() -> PathBuf {
-    dirs::home_dir().unwrap().join(".microclaw")
+    dirs::home_dir().unwrap().join(".pocketclaw")
 }
 
 fn get_cron_store_path() -> PathBuf {
@@ -152,9 +152,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // === Commands that DO require config ===
-    let config = AppConfig::load().map_err(|e| {
+    let config = AppConfig::load(None).map_err(|e| {
         anyhow::anyhow!(
-            "Failed to load config: {}. Run 'microclaw onboard' first.",
+            "Failed to load config: {}. Run 'pocketclaw onboard' first.",
             e
         )
     })?;
@@ -205,7 +205,7 @@ async fn main() -> anyhow::Result<()> {
             if let Ok(event) = rx.recv().await {
                 match event {
                     Event::OutboundMessage(msg) => {
-                        println!("\n🦞 Microclaw: {}\n", msg.content);
+                        println!("\n🦞 PocketClaw: {}\n", msg.content);
                     }
                     _ => {}
                 }
@@ -234,7 +234,7 @@ async fn main() -> anyhow::Result<()> {
 
             // Voice transcription
             if let Some(groq_cfg) = &config.providers.groq {
-                let _transcriber = microclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
+                let _transcriber = pocketclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
                 info!("Groq voice transcription enabled");
             }
 
@@ -283,7 +283,7 @@ async fn main() -> anyhow::Result<()> {
             run_skills(action, &workspace);
         }
         _ => {
-            println!("🦞 microclaw v{}", VERSION);
+            println!("🦞 pocketclaw v{}", VERSION);
             println!("Use --help for usage.");
         }
     }
@@ -312,23 +312,23 @@ fn create_provider(config: &AppConfig) -> anyhow::Result<Arc<dyn LLMProvider>> {
             google_cfg.model.clone(),
         )))
     } else {
-        anyhow::bail!("No LLM provider configured. Run 'microclaw onboard' to set one up.");
+        anyhow::bail!("No LLM provider configured. Run 'pocketclaw onboard' to set one up.");
     }
 }
 
 fn run_status() {
     let config_path = get_config_dir().join("config.json");
 
-    println!("🦞 microclaw Status\n");
+    println!("🦞 pocketclaw Status\n");
 
     if config_path.exists() {
         println!("Config: {} ✓", config_path.display());
     } else {
-        println!("Config: {} ✗ (run 'microclaw onboard')", config_path.display());
+        println!("Config: {} ✗ (run 'pocketclaw onboard')", config_path.display());
         return;
     }
 
-    match AppConfig::load() {
+    match AppConfig::load(None) {
         Ok(config) => {
             let workspace = config.workspace.clone();
             if workspace.exists() {

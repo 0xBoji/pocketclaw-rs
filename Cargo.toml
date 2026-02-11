@@ -21,16 +21,16 @@ debug = false        # No debug info
 
 [workspace.dependencies]
 # Local crates
-microclaw-core = { path = "crates/core" }
-microclaw-agent = { path = "crates/agent" }
-microclaw-providers = { path = "crates/providers" }
-microclaw-tools = { path = "crates/tools" }
-microclaw-skills = { path = "crates/skills" }
-microclaw-server = { path = "crates/server" }
-microclaw-cli = { path = "crates/cli" }
-microclaw-cron = { path = "crates/cron" }
-microclaw-voice = { path = "crates/voice" }
-microclaw-heartbeat = { path = "crates/heartbeat" }
+pocketclaw-core = { path = "crates/core" }
+pocketclaw-agent = { path = "crates/agent" }
+pocketclaw-providers = { path = "crates/providers" }
+pocketclaw-tools = { path = "crates/tools" }
+pocketclaw-skills = { path = "crates/skills" }
+pocketclaw-server = { path = "crates/server" }
+pocketclaw-cli = { path = "crates/cli" }
+pocketclaw-cron = { path = "crates/cron" }
+pocketclaw-voice = { path = "crates/voice" }
+pocketclaw-heartbeat = { path = "crates/heartbeat" }
 
 # Async Runtime
 tokio = { version = "1.36", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] } # Minimal features

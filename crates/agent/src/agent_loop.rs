@@ -1,10 +1,10 @@
 use crate::context::ContextBuilder;
 use crate::session::SessionManager;
-use microclaw_core::bus::{Event, MessageBus};
-use microclaw_core::config::AppConfig;
-use microclaw_core::types::{Message, Role};
-use microclaw_providers::{GenerationOptions, LLMProvider};
-use microclaw_tools::registry::ToolRegistry;
+use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::config::AppConfig;
+use pocketclaw_core::types::{Message, Role};
+use pocketclaw_providers::{GenerationOptions, LLMProvider};
+use pocketclaw_tools::registry::ToolRegistry;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, info};

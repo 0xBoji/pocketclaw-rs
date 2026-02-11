@@ -12,19 +12,19 @@ Microclaw is a modular, terminal-first AI agent that connects to multiple LLM pr
 ## Installation
 
 ```bash
-git clone https://github.com/0xBoji/microclaw-rs.git
-cd microclaw-rs
+git clone https://github.com/0xBoji/pocketclaw-rs.git
+cd pocketclaw-rs
 cargo build --release
 ```
 
-The compiled binary will be at `target/release/microclaw-cli`.
+The compiled binary will be at `target/release/pocketclaw-cli`.
 
 ## Quick Start
 
 Run the onboarding wizard to create your configuration:
 
 ```bash
-microclaw onboard
+pocketclaw onboard
 ```
 
 This will prompt you for:
@@ -35,20 +35,20 @@ This will prompt you for:
 - Integration tokens (Telegram, Discord)
 - Web search API key (Brave)
 
-The configuration is saved to `~/.microclaw/config.json`. The wizard also creates workspace template files (AGENTS.md, SOUL.md, USER.md, TOOLS.md, IDENTITY.md, and memory/MEMORY.md) in your chosen workspace directory.
+The configuration is saved to `~/.pocketclaw/config.json`. The wizard also creates workspace template files (AGENTS.md, SOUL.md, USER.md, TOOLS.md, IDENTITY.md, and memory/MEMORY.md) in your chosen workspace directory.
 
 ## Usage
 
 ### Send a message
 
 ```bash
-microclaw agent -m "What is the weather today?"
+pocketclaw agent -m "What is the weather today?"
 ```
 
 ### Start the gateway server
 
 ```bash
-microclaw gateway
+pocketclaw gateway
 ```
 
 This starts the HTTP server on port 8080, along with any configured Telegram and Discord bots, the heartbeat service, and the cron scheduler.
@@ -63,7 +63,7 @@ This starts the HTTP server on port 8080, along with any configured Telegram and
 ### Check status
 
 ```bash
-microclaw status
+pocketclaw status
 ```
 
 Displays the current configuration state, including which providers and integrations are configured.
@@ -72,27 +72,27 @@ Displays the current configuration state, including which providers and integrat
 
 ```bash
 # List all jobs
-microclaw cron list
+pocketclaw cron list
 
 # Add a recurring job (every 3600 seconds)
-microclaw cron add --name "daily-summary" --message "Summarize today's events" --every 3600
+pocketclaw cron add --name "daily-summary" --message "Summarize today's events" --every 3600
 
 # Remove a job
-microclaw cron remove <job-id>
+pocketclaw cron remove <job-id>
 
 # Enable or disable a job
-microclaw cron enable <job-id>
-microclaw cron disable <job-id>
+pocketclaw cron enable <job-id>
+pocketclaw cron disable <job-id>
 ```
 
 ### Manage skills
 
 ```bash
 # List installed skills
-microclaw skills list
+pocketclaw skills list
 
 # Show skill details
-microclaw skills show <skill-name>
+pocketclaw skills show <skill-name>
 ```
 
 Skills are directories inside your workspace's `skills/` folder. Each skill should contain a `SKILL.md` file describing its purpose and instructions.
@@ -100,12 +100,12 @@ Skills are directories inside your workspace's `skills/` folder. Each skill shou
 ### Print version
 
 ```bash
-microclaw --version
+pocketclaw --version
 ```
 
 ## Configuration
 
-The configuration file is located at `~/.microclaw/config.json`. You can edit it directly or re-run `microclaw onboard` to regenerate it.
+The configuration file is located at `~/.pocketclaw/config.json`. You can edit it directly or re-run `pocketclaw onboard` to regenerate it.
 
 ### Example configuration
 
@@ -176,7 +176,7 @@ The configuration file is located at `~/.microclaw/config.json`. You can edit it
 Microclaw is organized as a Cargo workspace with 11 crates:
 
 ```
-microclaw-rs/
+pocketclaw-rs/
   crates/
     core/          # Config, MessageBus, types
     agent/         # Agent loop, context builder, session management
@@ -202,7 +202,7 @@ microclaw-rs/
 
 ## Workspace Files
 
-When you run `microclaw onboard`, the following template files are created in your workspace:
+When you run `pocketclaw onboard`, the following template files are created in your workspace:
 
 | File               | Purpose                                      |
 |:-------------------|:---------------------------------------------|
