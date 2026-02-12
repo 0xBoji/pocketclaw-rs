@@ -1,12 +1,15 @@
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
+use pocketclaw_core::metrics::{MetricsStore, MetricsSnapshot};
+use tokio::sync::mpsc;
 use pocketclaw_core::bus::{Event, MessageBus};
 use pocketclaw_core::types::{Message, Role};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -22,6 +25,8 @@ struct AppState {
     /// If set, all mutating endpoints require `Authorization: Bearer <token>`
     auth_token: Option<String>,
     attachment_policy: AttachmentPolicy,
+    metrics: Arc<MetricsStore>,
+    reload_tx: mpsc::Sender<()>,
 }
 
 pub struct Gateway {
@@ -30,6 +35,8 @@ pub struct Gateway {
     /// Optional auth token. If None, gateway binds to 127.0.0.1 only.
     auth_token: Option<String>,
     attachment_policy: AttachmentPolicy,
+    metrics: Arc<MetricsStore>,
+    reload_tx: mpsc::Sender<()>,
 }
 
 #[derive(Serialize)]
@@ -69,23 +76,27 @@ struct ErrorResponse {
 }
 
 impl Gateway {
-    pub fn new(bus: Arc<MessageBus>, port: u16) -> Self {
+    pub fn new(bus: Arc<MessageBus>, port: u16, metrics: Arc<MetricsStore>, reload_tx: mpsc::Sender<()>) -> Self {
         Self {
             bus,
             port,
             auth_token: None,
             attachment_policy: AttachmentPolicy::default(),
+            metrics,
+            reload_tx,
         }
     }
 
     /// Create gateway with auth token. If token is set, binds to 0.0.0.0.
     /// If no token, binds to 127.0.0.1 (local-only) for safety.
-    pub fn with_auth(bus: Arc<MessageBus>, port: u16, auth_token: Option<String>) -> Self {
+    pub fn with_auth(bus: Arc<MessageBus>, port: u16, auth_token: Option<String>, metrics: Arc<MetricsStore>, reload_tx: mpsc::Sender<()>) -> Self {
         Self {
             bus,
             port,
             auth_token,
             attachment_policy: AttachmentPolicy::default(),
+            metrics,
+            reload_tx,
         }
     }
 
@@ -99,6 +110,8 @@ impl Gateway {
             bus: self.bus.clone(),
             auth_token: self.auth_token.clone(),
             attachment_policy: self.attachment_policy.clone(),
+            metrics: self.metrics.clone(),
+            reload_tx: self.reload_tx.clone(),
         };
 
         // Determine max body size from policy or default
@@ -113,6 +126,8 @@ impl Gateway {
             .route("/api/status", get(api_status))
             .route("/api/message", post(send_message))
             .route("/api/attachment", post(upload_attachment))
+            .route("/api/control/reload", put(reload_config))
+            .route("/api/monitor/metrics", get(get_metrics))
             .layer(DefaultBodyLimit::max(max_size))
             .with_state(state);
 
@@ -290,4 +305,22 @@ async fn upload_attachment(
     }
 
     Err((StatusCode::BAD_REQUEST, "No file uploaded".to_string()))
+}
+
+async fn reload_config(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, StatusCode> {
+    check_auth(&state, &headers)?;
+    info!("Control request: Config reload triggered");
+    state.reload_tx.send(()).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(json!({ "status": "reload_triggered" })))
+}
+
+async fn get_metrics(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<MetricsSnapshot>, StatusCode> {
+    check_auth(&state, &headers)?;
+    Ok(Json(state.metrics.snapshot()))
 }

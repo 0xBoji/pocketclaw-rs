@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use pocketclaw_core::types::{Message, Role};
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use std::path::Path;
 use tracing::{info, instrument};
 use uuid::Uuid;
 

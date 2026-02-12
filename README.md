@@ -1,197 +1,303 @@
-# PocketClaw (Rust Edition)
+# PocketClaw (Rust + Android Local Gateway)
 
-PocketClaw is a secure, high-performance AI agent runtime designed for mobile (Android/Termux) and server environments. It features a sandboxed execution environment, robust permission system, and multi-channel support (CLI, Telegram, Discord).
+PocketClaw is a local-first AI agent runtime designed to run on:
+- Linux/macOS servers
+- Termux on Android
+- Old Android phones as local gateway nodes
 
-> [!IMPORTANT]
-> **Android First**: This project is specifically optimized for Android environments via Termux. It includes JNI bindings for native integration and is designed to run efficiently on mobile hardware.
+Main goal: users can configure an API key and start using the local gateway quickly.
 
-## Features
+## What You Get
 
-### 🛡️ Security & Sandboxing (Wave A)
-*   **Path Isolation**: All file operations are strictly confined to the workspace. Symlinks and `..` traversal are blocked.
-*   **Process Sandboxing**: Tools run in isolated process groups. Timeouts kill the entire process tree to prevent zombies.
-*   **Network Guard**: SSRF protection blocks access to private IPs (localhost, 192.168.x.x, AWS metadata).
-*   **Permission System**: granular `skill.toml` manifest system. Default-deny policy for all tools.
-*   **Secret Management**: Secrets are stored in `~/.pocketclaw/secrets.json` (0600 permissions) and masked in logs.
-
-### 🏗️ Architecture & Reliability (Wave B)
-*   **SQLite Persistence**: Robust session and message storage (replacing fragile JSON files).
-*   **Unified Audit Logging**: Structured `audit.jsonl` tracks every tool execution, error, and security event.
-*   **Cron Security**: Scheduled tasks run with strict identity tagging and security boundaries.
-*   **Cost Control**: Auto-summarization and history trimming (keep last 10 messages) to manage context window limits.
-
-### 🚀 Production Ready (Wave C)
-*   **Backpressure**: Dedicated inbound message queue prevents system logs from flooding agent commands.
-*   **Resource Limits**: Enforced `cpu`, `nproc`, and `nofile` limits via `setrlimit` (Unix/Android).
-*   **Attachment Policy**: Secure file uploads with MIME type validation, size limits, and isolated storage.
-*   **Supervisor**: Built-in watchdog binary (`pocketclaw-supervisor`) for auto-restart, healthchecks, and log rotation.
-
-### 📱 Android Integration
-*   Native JNI bindings for Android integration.
-*   Optimization for Termux environments (binary size < 20MB).
+- Local gateway API (`/api/message`, `/api/status`, `/api/monitor/metrics`, `/api/control/reload`)
+- Multi-provider LLM support (OpenAI, OpenRouter, Anthropic, Google, Groq)
+- Optional Telegram/Discord channels
+- Tool sandboxing (filesystem boundary, exec timeout, SSRF checks)
+- SQLite session persistence + audit logs
+- Android app with controller-style setup screens
 
 ---
 
-## Installation & Usage Guide (A-Z)
+## 1) Quick Start (Desktop / Server)
 
-### Step 1: Install Dependencies
+### 1.1 Prerequisites
+
+- Rust stable toolchain
+- `clang` (recommended)
+- `git`
+
+Install Rust:
+
 ```bash
-# Install Rust (if not already installed)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-
-# For Termux users, ensure you have the necessary build tools:
-# pkg install clang make binutils
+source "$HOME/.cargo/env"
 ```
 
-### Step 2: Clone & Build
-```bash
-# Clone the repository
-git clone https://github.com/0xboji/pocketclaw-rs
-cd picoclaw-rs
+### 1.2 Clone and Build
 
-# Build all components (CLI, Server, Supervisor)
+```bash
+git clone https://github.com/0xBoji/microclaw.git
+cd microclaw
 cargo build --release
-
-# Binaries will be located in target/release/:
-# - pocketclaw-cli
-# - pocketclaw-server  
-# - pocketclaw-supervisor
 ```
 
-### Step 3: Create Configuration File
-```bash
-# Create the config directory
-mkdir -p ~/.pocketclaw
+### 1.3 Create Config (`~/.pocketclaw/config.json`)
 
-# Create the config file
-cat > ~/.pocketclaw/config.json << 'EOF'
+```bash
+mkdir -p ~/.pocketclaw
+mkdir -p ~/pocketclaw-workspace
+
+cat > ~/.pocketclaw/config.json << 'JSON'
 {
-  "workspace": "./workspace",
+  "workspace": "/Users/YOUR_USER/pocketclaw-workspace",
   "agents": {
     "default": {
-      "model": "claude-3-5-sonnet-20240620",
-      "system_prompt": "You are a helpful AI assistant.",
+      "model": "gpt-4o-mini",
+      "system_prompt": "You are a helpful assistant.",
       "max_tokens": 4096,
       "temperature": 0.7
     }
   },
   "providers": {
-    "anthropic": {
-      "api_key": "YOUR_ANTHROPIC_API_KEY",
-      "model": "claude-3-5-sonnet-20240620"
+    "openai": {
+      "api_key": "YOUR_OPENAI_API_KEY",
+      "model": "gpt-4o-mini"
     }
-  },
-  "attachment_policy": {
-    "enabled": true,
-    "max_size_bytes": 10485760,
-    "allowed_mime_types": ["image/png", "image/jpeg", "text/plain", "application/pdf"],
-    "storage_directory": "attachments"
   }
 }
-EOF
-
-# Create the workspace directory
-mkdir -p workspace
+JSON
 ```
 
-### Step 4: Run the Agent
+Replace:
+- `workspace` with your real absolute path
+- `YOUR_OPENAI_API_KEY` with your key
 
-#### Option A: CLI Mode (Interactive)
+### 1.4 Start Gateway
+
 ```bash
-./target/release/pocketclaw-cli
-
-# Or with a custom config
-./target/release/pocketclaw-cli --config ~/.pocketclaw/config.json
+./target/release/pocketclaw-cli gateway
 ```
 
-#### Option B: Server Mode (API Gateway)
-```bash
-# Run server on port 3000
-./target/release/pocketclaw-server --port 3000
+### 1.5 Test API
 
-# Test the API
-curl http://localhost:3000/health
-curl -X POST http://localhost:3000/api/message \
+```bash
+curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/api/status
+
+curl -X POST http://127.0.0.1:8080/api/message \
   -H "Content-Type: application/json" \
-  -d '{"message": "Hello, what can you do?"}'
+  -d '{"message":"Hello from local gateway"}'
 ```
 
-#### Option C: Production Mode (with Supervisor)
+---
+
+## 2) Termux Setup (Android CLI Mode)
+
+Use this if you want to run PocketClaw directly inside Termux.
+
+### 2.1 Install Dependencies
+
 ```bash
-# Supervisor automatically restarts the process if it crashes
-./target/release/pocketclaw-supervisor \
-  --command "./target/release/pocketclaw-server" \
-  --args "--port 3000" \
-  --health-url "http://127.0.0.1:3000/health" \
-  --health-interval-secs 30 \
-  --max-fails 3
-
-# Logs will be written to logs/supervisor.log
+pkg update && pkg upgrade -y
+pkg install -y git curl clang make pkg-config openssl
 ```
 
-### Step 5: Upload File (Attachment)
+Install Rust in Termux:
+
 ```bash
-# Upload a file via the API
-curl -X POST http://localhost:3000/api/attachment \
-  -F "file=@/path/to/image.png"
-
-# Response:
-# {
-#   "id": "uuid",
-#   "url": "attachment://uuid",
-#   "filename": "image.png",
-#   "mime_type": "image/png",
-#   "size_bytes": 12345
-# }
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
 ```
 
-### Step 6: Manage Skills & Permissions
+### 2.2 Build
+
 ```bash
-# Approve a skill
-./target/release/pocketclaw-cli skills approve my-skill
-
-# Revoke permission
-./target/release/pocketclaw-cli skills revoke my-skill
-
-# List approved skills
-./target/release/pocketclaw-cli skills list
+git clone https://github.com/0xBoji/microclaw.git
+cd microclaw
+cargo build --release
 ```
 
-### Detailed Configuration
+### 2.3 Create Config
 
-#### Providers (LLM)
-Supports multiple providers:
+```bash
+mkdir -p ~/.pocketclaw
+mkdir -p ~/pocketclaw-workspace
+
+cat > ~/.pocketclaw/config.json << 'JSON'
+{
+  "workspace": "/data/data/com.termux/files/home/pocketclaw-workspace",
+  "agents": {
+    "default": {
+      "model": "gpt-4o-mini",
+      "system_prompt": "You are a helpful assistant.",
+      "max_tokens": 4096,
+      "temperature": 0.7
+    }
+  },
+  "providers": {
+    "openai": {
+      "api_key": "YOUR_OPENAI_API_KEY",
+      "model": "gpt-4o-mini"
+    }
+  }
+}
+JSON
+```
+
+### 2.4 Run Gateway in Termux
+
+```bash
+./target/release/pocketclaw-cli gateway
+```
+
+If you need 24/7 process management, use `tmux` or run via `pocketclaw-supervisor`.
+
+---
+
+## 3) Android App Setup (Old Phones as Local Gateway)
+
+PocketClaw includes an Android app and JNI bridge for local gateway control.
+
+### 3.1 Build Native + APK
+
+Requirements:
+- Android Studio (recommended)
+- Android SDK + NDK
+- Rust + `cargo-ndk`
+
+Build native libs:
+
+```bash
+./build_android.sh
+```
+
+Then build APK:
+
+```bash
+cd android
+# Use Android Studio or Gradle wrapper (if present in your env)
+gradle assembleDebug
+```
+
+### 3.2 Install and Configure in App
+
+The app provides controller screens:
+1. Workspace Creator
+2. Provider & Secrets Manager
+3. Channel Chat Setup
+4. Skill Manifest Viewer & Permissions
+5. Agent Control Dashboard (Start/Stop)
+6. Resource & Log Monitor
+7. Safety & Sandbox Toggles
+
+Minimum required input:
+- Provider
+- API key
+- Model
+
+Then tap Start in dashboard.
+
+---
+
+## 4) Common CLI Commands
+
+```bash
+# Interactive agent message
+./target/release/pocketclaw-cli agent -m "Summarize my workspace"
+
+# Gateway
+./target/release/pocketclaw-cli gateway
+
+# Status
+./target/release/pocketclaw-cli status
+
+# Onboarding wizard
+./target/release/pocketclaw-cli onboard
+
+# Cron
+./target/release/pocketclaw-cli cron list
+./target/release/pocketclaw-cli cron add --name "heartbeat" --message "check tasks" --every 300
+```
+
+---
+
+## 5) Configuration Notes
+
+### 5.1 Providers
+
+Example OpenRouter section:
+
 ```json
 {
   "providers": {
-    "anthropic": { "api_key": "sk-ant-..." },
-    "openai": { "api_key": "sk-...", "model": "gpt-4" },
-    "openrouter": { "api_key": "sk-or-...", "api_base": "https://openrouter.ai/api/v1" },
-    "groq": { "api_key": "gsk_..." }
+    "openrouter": {
+      "api_key": "YOUR_OPENROUTER_KEY",
+      "api_base": "https://openrouter.ai/api/v1",
+      "model": "openai/gpt-4o-mini"
+    }
   }
 }
 ```
 
-#### Telegram Bot (Optional)
+### 5.2 Optional Integrations
+
 ```json
 {
-  "telegram": {
-    "token": "YOUR_BOT_TOKEN"
+  "telegram": { "token": "TELEGRAM_BOT_TOKEN" },
+  "discord": { "token": "DISCORD_BOT_TOKEN" },
+  "web": {
+    "brave_key": "BRAVE_SEARCH_API_KEY",
+    "auth_token": "OPTIONAL_GATEWAY_BEARER_TOKEN"
+  },
+  "google_sheets": {
+    "spreadsheet_id": "YOUR_SHEET_ID",
+    "service_account_json": "{...service account json...}"
   }
 }
 ```
 
-#### Discord Bot (Optional)
-```json
-{
-  "discord": {
-    "token": "YOUR_DISCORD_TOKEN"
-  }
-}
+---
+
+## 6) Security Defaults
+
+- If gateway auth token is not set, server binds to localhost only.
+- Tools are permission-gated by approved skills.
+- Filesystem tool access is constrained to workspace.
+- Web fetch includes SSRF checks against private/reserved ranges.
+
+---
+
+## 7) Troubleshooting
+
+### `Failed to load config`
+- Check `~/.pocketclaw/config.json` exists and valid JSON.
+
+### Android build error: `SDK location not found`
+- Set `ANDROID_HOME`, or create `android/local.properties`:
+
+```properties
+sdk.dir=/absolute/path/to/Android/sdk
 ```
 
-## Security Model
-*   **Untrusted Skills**: Must be approved via `pocketclaw-cli skills approve <name>`.
-*   **Network Access**: All outbound requests are filtered. Internal subnets are blocked by default.
-*   **File Access**: `read_file` and `write_file` trapped within `workspace/`. Can be further restricted per skill.
+### Termux runtime issues
+- Ensure `source "$HOME/.cargo/env"`
+- Rebuild after updates: `cargo clean && cargo build --release`
+
+---
+
+## 8) Project Layout
+
+- `crates/core` - shared types/config/security primitives
+- `crates/agent` - agent loop, context building, sessions
+- `crates/tools` - exec/fs/web tools and sandbox controls
+- `crates/providers` - LLM provider adapters
+- `crates/server` - HTTP gateway
+- `crates/cli` - command entrypoint and onboarding
+- `crates/mobile-jni` - Android JNI bridge
+- `android/` - Android app project
+
+---
+
+## 9) License
+
+MIT

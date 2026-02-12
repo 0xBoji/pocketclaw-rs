@@ -23,6 +23,27 @@
         <activity
             android:name=".SetupActivity"
             android:exported="false" />
+        <activity
+            android:name=".wave.ControllerDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.WorkspaceCreatorActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.ProviderSecretsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.ChannelChatSetupActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.SkillsPermissionsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.ResourceMonitorActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.SafetySandboxActivity"
+            android:exported="false" />
 
         <service
             android:name=".PocketClawService"

@@ -145,6 +145,7 @@ pub fn run_onboarding() -> anyhow::Result<()> {
             .prompt()?;
         web_config = Some(WebConfig {
             brave_key: Some(key),
+            auth_token: None,
         });
     }
 

@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         // Spawn the child process
-        let mut child = Command::new(&args.command)
+        let child = Command::new(&args.command)
             .args(&args.args)
             .kill_on_drop(true) // Ensure child dies if supervisor panics/drops handle
             // Redirect output to inherit (supervisor's stdout/stderr)

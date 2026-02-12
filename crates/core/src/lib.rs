@@ -6,3 +6,4 @@ pub mod channel;
 pub mod secrets;
 pub mod permissions;
 pub mod attachment;
+pub mod metrics;

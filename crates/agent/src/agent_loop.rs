@@ -10,31 +10,33 @@ use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 use serde_json::json;
 use pocketclaw_core::audit::log_audit_internal;
+use pocketclaw_core::metrics::MetricsStore;
+use tokio::sync::RwLock;
 
 /// Maximum tool-call loop iterations before the agent stops.
 const MAX_ITERATIONS: usize = 10;
 /// Number of LLM retry attempts on transient errors.
 const LLM_RETRIES: usize = 3;
-/// History trim threshold — auto-summarize after this many messages per session.
-const HISTORY_TRIM_THRESHOLD: usize = 30;
 
 pub struct AgentLoop {
     bus: Arc<MessageBus>,
-    config: AppConfig,
+    config: Arc<RwLock<AppConfig>>,
     provider: Arc<dyn LLMProvider>,
     tools: ToolRegistry,
     context_builder: ContextBuilder,
     sessions: SessionManager,
+    metrics: Arc<MetricsStore>,
 }
 
 impl AgentLoop {
     pub fn new(
         bus: Arc<MessageBus>,
-        config: AppConfig,
+        config: Arc<RwLock<AppConfig>>,
         provider: Arc<dyn LLMProvider>,
         tools: ToolRegistry,
         context_builder: ContextBuilder,
         sessions: SessionManager,
+        metrics: Arc<MetricsStore>,
     ) -> Self {
         Self {
             bus,
@@ -43,6 +45,7 @@ impl AgentLoop {
             tools,
             context_builder,
             sessions,
+            metrics,
         }
     }
 
@@ -137,11 +140,13 @@ impl AgentLoop {
         }
 
         // 4. Initial LLM Call
+        let config_locked = self.config.read().await;
         let options = GenerationOptions {
-            model: self.config.agents.default.model.clone(),
-            max_tokens: Some(self.config.agents.default.max_tokens),
-            temperature: Some(self.config.agents.default.temperature),
+            model: config_locked.agents.default.model.clone(),
+            max_tokens: Some(config_locked.agents.default.max_tokens),
+            temperature: Some(config_locked.agents.default.temperature),
         };
+        drop(config_locked);
 
         let mut current_messages = messages.clone();
         let mut iteration = 0;
@@ -171,6 +176,8 @@ impl AgentLoop {
                     "LLM token usage"
                 );
 
+                self.metrics.add_tokens(usage.input_tokens as u64, usage.output_tokens as u64);
+                
                 log_audit_internal(
                     "llm_completion",
                     &msg.session_key,
@@ -221,6 +228,7 @@ impl AgentLoop {
                     }
                     
                     let start = std::time::Instant::now();
+                    self.metrics.inc_tool_calls();
                     let result = if let Some(tool) = self.tools.get(&tool_call.name).await {
                          // Permission guard
                          let allowed_tools: Vec<String> = Vec::new();
@@ -322,11 +330,13 @@ impl AgentLoop {
                 Message::new("user", session_key, Role::User, &user_prompt),
             ];
             
+            let config_locked = self.config.read().await;
             let options = GenerationOptions {
-                model: self.config.agents.default.model.clone(),
+                model: config_locked.agents.default.model.clone(),
                 max_tokens: Some(500),
                 temperature: Some(0.3),
             };
+            drop(config_locked);
 
             let tool_defs = vec![]; 
 
@@ -336,7 +346,8 @@ impl AgentLoop {
                     self.sessions.set_summary(session_key, summary.clone()).await;
                     self.sessions.mark_summarized(session_key);
                     
-                    if let Some(usage) = resp.usage {
+                    if let Some(usage) = &resp.usage {
+                        self.metrics.add_tokens(usage.input_tokens as u64, usage.output_tokens as u64);
                         info!(
                             session = %session_key,
                             input_tokens = usage.input_tokens,

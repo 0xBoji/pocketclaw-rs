@@ -1,9 +1,8 @@
 use serde::Deserialize;
 use std::path::PathBuf;
-use walkdir::WalkDir;
 use regex::Regex;
 use std::fs;
-use tracing::{warn, error};
+use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub struct Skill {

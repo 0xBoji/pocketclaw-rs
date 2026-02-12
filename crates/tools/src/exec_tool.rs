@@ -1,4 +1,3 @@
-use std::os::unix::process::CommandExt;
 use crate::sandbox::{SandboxConfig, truncate_output};
 use crate::{Tool, ToolError};
 use async_trait::async_trait;
@@ -161,7 +160,7 @@ impl Tool for ExecTool {
             });
         }
 
-        let mut child = cmd.spawn()
+        let child = cmd.spawn()
             .map_err(|e| ToolError::ExecutionError(format!("Failed to spawn: {}", e)))?;
 
         let pid = child.id().ok_or_else(|| ToolError::ExecutionError("Failed to get child PID".to_string()))?;

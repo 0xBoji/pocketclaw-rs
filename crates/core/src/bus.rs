@@ -1,5 +1,7 @@
 use crate::types::Message;
+use crate::metrics::MetricsStore;
 use tokio::sync::broadcast;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -11,6 +13,7 @@ pub enum Event {
 pub struct MessageBus {
     tx: broadcast::Sender<Event>,
     inbound_tx: broadcast::Sender<Message>,
+    metrics: Option<Arc<MetricsStore>>,
 }
 
 impl MessageBus {
@@ -18,7 +21,12 @@ impl MessageBus {
         let (tx, _) = broadcast::channel(capacity);
         // Separate input queue with same capacity (impl "drop oldest" policy)
         let (inbound_tx, _) = broadcast::channel(capacity);
-        Self { tx, inbound_tx }
+        Self { tx, inbound_tx, metrics: None }
+    }
+
+    pub fn with_metrics(mut self, metrics: Arc<MetricsStore>) -> Self {
+        self.metrics = Some(metrics);
+        self
     }
 
     /// Subscribe to general events (logs, outbound messages, etc.)
@@ -35,6 +43,13 @@ impl MessageBus {
         if let Event::InboundMessage(ref msg) = event {
             // Also send to dedicated inbound queue
             let _ = self.inbound_tx.send(msg.clone());
+            if let Some(metrics) = &self.metrics {
+                metrics.inc_messages_in();
+            }
+        } else if let Event::OutboundMessage(_) = event {
+            if let Some(metrics) = &self.metrics {
+                metrics.inc_messages_out();
+            }
         }
         self.tx.send(event)
     }

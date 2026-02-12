@@ -24,6 +24,7 @@ pub struct DiscordConfig {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct WebConfig {
     pub brave_key: Option<String>,
+    pub auth_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

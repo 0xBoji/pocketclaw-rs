@@ -24,6 +24,8 @@ use std::sync::Arc;
 use tracing::{error, info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 use tracing_appender;
+use tokio::sync::{mpsc, RwLock};
+use pocketclaw_core::metrics::MetricsStore;
 
 const VERSION: &str = "0.1.0";
 
@@ -195,7 +197,12 @@ async fn main() -> anyhow::Result<()> {
             e
         )
     })?;
-    let workspace = config.workspace.clone();
+    let config = Arc::new(RwLock::new(config));
+    let metrics = MetricsStore::new();
+    let (reload_tx, _reload_rx) = mpsc::channel(1); // main.rs doesn't handle reloads yet, just needs it for Gateway
+
+    let config_val = config.read().await.clone();
+    let workspace = config_val.workspace.clone();
 
     // ensure workspace exists
     tokio::fs::create_dir_all(&workspace).await?;
@@ -211,8 +218,8 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Create Components
-    let bus = Arc::new(MessageBus::new(100));
-    let provider: Arc<dyn LLMProvider> = create_provider(&config)?;
+    let bus = Arc::new(MessageBus::new(100).with_metrics(metrics.clone()));
+    let provider: Arc<dyn LLMProvider> = create_provider(&config_val)?;
 
     let tools = ToolRegistry::new();
     tools.register(Arc::new(ExecTool::new(sandbox.clone()))).await;
@@ -221,10 +228,11 @@ async fn main() -> anyhow::Result<()> {
     tools.register(Arc::new(ListDirTool::new(sandbox.clone()))).await;
     tools.register(Arc::new(WebFetchTool::new(sandbox.clone()))).await;
 
-    if let Some(web_cfg) = &config.web {
+    if let Some(web_cfg) = &config_val.web {
         if let Some(brave_key) = &web_cfg.brave_key {
+            let tool: Arc<dyn pocketclaw_tools::Tool> = Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone()));
             tools
-                .register(Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone())))
+                .register(tool)
                 .await;
         }
     }
@@ -233,7 +241,7 @@ async fn main() -> anyhow::Result<()> {
     let store_url = format!("sqlite://{}?mode=rwc", db_path.display()); // rwc = read write create
     let store = pocketclaw_persistence::SqliteSessionStore::new(&store_url).await?;
 
-    let sheets_client = if let Some(sheets_cfg) = &config.google_sheets {
+    let sheets_client = if let Some(sheets_cfg) = &config_val.google_sheets {
         match pocketclaw_agent::sheets::SheetsClient::new(
             sheets_cfg.service_account_json.clone(),
             sheets_cfg.spreadsheet_id.clone(),
@@ -258,6 +266,7 @@ async fn main() -> anyhow::Result<()> {
         tools,
         context_builder,
         sessions,
+        metrics.clone(),
     );
 
     // Subscribe to Bus for logging
@@ -277,7 +286,13 @@ async fn main() -> anyhow::Result<()> {
 
     match &cli.command {
         Some(Commands::Gateway) => {
-            let gateway = Gateway::new(bus.clone(), 8080);
+            let gateway = Gateway::with_auth(
+                bus.clone(), 
+                8080, 
+                config_val.web.as_ref().and_then(|w| w.auth_token.clone()),
+                metrics.clone(),
+                reload_tx
+            );
             tokio::spawn(async move {
                 if let Err(e) = gateway.start().await {
                     error!("Gateway error: {}", e);
@@ -295,13 +310,13 @@ async fn main() -> anyhow::Result<()> {
             info!("Cron service initialized");
 
             // Voice transcription
-            if let Some(groq_cfg) = &config.providers.groq {
+            if let Some(groq_cfg) = &config_val.providers.groq {
                 let _transcriber = pocketclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
                 info!("Groq voice transcription enabled");
             }
 
             // Start Telegram Bot if configured
-            if let Some(telegram_cfg) = &config.telegram {
+            if let Some(telegram_cfg) = &config_val.telegram {
                 let telegram_bot = TelegramBot::new(bus.clone(), telegram_cfg.token.clone());
                 tokio::spawn(async move {
                     if let Err(e) = telegram_bot.start().await {
@@ -311,7 +326,7 @@ async fn main() -> anyhow::Result<()> {
             }
 
             // Start Discord Bot if configured
-            if let Some(discord_cfg) = &config.discord {
+            if let Some(discord_cfg) = &config_val.discord {
                 let discord_bot = DiscordBot::new(bus.clone(), discord_cfg.token.clone());
                 tokio::spawn(async move {
                     if let Err(e) = discord_bot.start().await {
