@@ -1,4 +1,5 @@
 pub mod onboard;
+pub mod verify;
 
 use pocketclaw_agent::agent_loop::AgentLoop;
 use pocketclaw_agent::context::ContextBuilder;
@@ -12,6 +13,7 @@ use pocketclaw_providers::google::GoogleProvider;
 use pocketclaw_providers::openai::OpenAIProvider;
 use pocketclaw_providers::LLMProvider;
 use pocketclaw_server::gateway::Gateway;
+use pocketclaw_core::channel::ChannelAdapter;
 use pocketclaw_telegram::TelegramBot;
 use pocketclaw_discord::DiscordBot;
 use pocketclaw_tools::sandbox::SandboxConfig;

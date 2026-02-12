@@ -25,3 +25,4 @@ serde_json.workspace = true
 pocketclaw-cron = { workspace = true }
 pocketclaw-voice = { workspace = true }
 pocketclaw-heartbeat = { workspace = true }
+reqwest = { workspace = true }

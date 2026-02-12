@@ -1,9 +1,10 @@
 use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::channel::ChannelAdapter;
 use pocketclaw_core::types::{Message, Role};
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{ChatAction, ParseMode};
-
+use async_trait::async_trait;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -17,7 +18,8 @@ impl TelegramBot {
         Self { bus, token }
     }
 
-    pub async fn start(&self) -> anyhow::Result<()> {
+    /// Internal start method (called by ChannelAdapter::start)
+    async fn start_polling(&self) -> anyhow::Result<()> {
         let bot = Bot::new(&self.token);
         let bus = self.bus.clone();
 
@@ -61,8 +63,6 @@ impl TelegramBot {
                         let chat_id = msg.chat.id;
                         info!(chat_id = %chat_id, "Received voice message (transcription pending)");
 
-                        // Voice messages need the voice crate to transcribe
-                        // For now, acknowledge receipt
                         let inbound = Message {
                             id: Uuid::new_v4(),
                             channel: "telegram".to_string(),
@@ -184,5 +184,16 @@ impl TelegramBot {
             .await;
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl ChannelAdapter for TelegramBot {
+    fn channel_name(&self) -> &str {
+        "telegram"
+    }
+
+    async fn start(&self) -> anyhow::Result<()> {
+        self.start_polling().await
     }
 }

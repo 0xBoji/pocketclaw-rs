@@ -9,4 +9,5 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 teloxide = { version = "0.12", default-features = false, features = ["macros", "rustls", "ctrlc_handler"] }
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

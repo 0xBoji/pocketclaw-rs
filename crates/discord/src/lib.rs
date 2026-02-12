@@ -1,4 +1,5 @@
 use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::channel::ChannelAdapter;
 use pocketclaw_core::types::{Message, Role};
 use serenity::async_trait;
 use serenity::model::channel::Message as DiscordMessage;
@@ -52,7 +53,8 @@ impl DiscordBot {
         Self { bus, token }
     }
 
-    pub async fn start(&self) -> anyhow::Result<()> {
+    /// Internal start method (called by ChannelAdapter::start)
+    async fn start_polling(&self) -> anyhow::Result<()> {
         let intents = GatewayIntents::GUILD_MESSAGES
             | GatewayIntents::DIRECT_MESSAGES
             | GatewayIntents::MESSAGE_CONTENT;
@@ -98,5 +100,16 @@ impl DiscordBot {
         }
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl ChannelAdapter for DiscordBot {
+    fn channel_name(&self) -> &str {
+        "discord"
+    }
+
+    async fn start(&self) -> anyhow::Result<()> {
+        self.start_polling().await
     }
 }
