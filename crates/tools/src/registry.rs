@@ -27,6 +27,12 @@ impl ToolRegistry {
 
     pub async fn list_definitions(&self) -> Vec<serde_json::Value> {
         let tools = self.tools.read().await;
-        tools.values().map(|t| t.parameters()).collect()
+        tools.values().map(|t| {
+            serde_json::json!({
+                "name": t.name(),
+                "description": t.description(),
+                "parameters": t.parameters()
+            })
+        }).collect()
     }
 }
