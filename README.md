@@ -1,236 +1,87 @@
-# PocketClaw
+# PocketClaw (Rust Edition)
 
-Ultra-lightweight personal AI assistant written in Rust.
+PocketClaw is a secure, high-performance AI agent runtime designed for mobile (Android/Termux) and server environments. It features a sandboxed execution environment, robust permission system, and multi-channel support (CLI, Telegram, Discord).
 
-PocketClaw is a modular, terminal-first AI agent that connects to multiple LLM providers and messaging platforms. It supports tools, skills, scheduled tasks, and voice transcription out of the box.
+## Features
 
-## Requirements
+### 🛡️ Security & Sandboxing (Wave A)
+*   **Path Isolation**: All file operations are strictly confined to the workspace. Symlinks and `..` traversal are blocked.
+*   **Process Sandboxing**: Tools run in isolated process groups. Timeouts kill the entire process tree to prevent zombies.
+*   **Network Guard**: SSRF protection blocks access to private IPs (localhost, 192.168.x.x, AWS metadata).
+*   **Permission System**: granular `skill.toml` manifest system. Default-deny policy for all tools.
+*   **Secret Management**: Secrets are stored in `~/.pocketclaw/secrets.json` (0600 permissions) and masked in logs.
 
-- Rust 1.75 or later
-- Cargo (included with Rust)
+### 🏗️ Architecture & Reliability (Wave B)
+*   **SQLite Persistence**: Robust session and message storage (replacing fragile JSON files).
+*   **Unified Audit Logging**: Structured `audit.jsonl` tracks every tool execution, error, and security event.
+*   **Cron Security**: Scheduled tasks run with strict identity tagging and security boundaries.
+*   **Cost Control**: Auto-summarization and history trimming (keep last 10 messages) to manage context window limits.
 
-## Installation
+### 🚀 Production Ready (Wave C)
+*   **Backpressure**: Dedicated inbound message queue prevents system logs from flooding agent commands.
+*   **Resource Limits**: Enforced `cpu`, `nproc`, and `nofile` limits via `setrlimit` (Unix/Android).
+*   **Attachment Policy**: Secure file uploads with MIME type validation, size limits, and isolated storage.
+*   **Supervisor**: Built-in watchdog binary (`pocketclaw-supervisor`) for auto-restart, healthchecks, and log rotation.
 
-```bash
-git clone https://github.com/0xBoji/pocketclaw-rs.git
-cd pocketclaw-rs
-cargo build --release
-```
-
-The compiled binary will be at `target/release/pocketclaw-cli`.
-
-## Quick Start
-
-Run the onboarding wizard to create your configuration:
-
-```bash
-pocketclaw onboard
-```
-
-This will prompt you for:
-
-- Workspace directory
-- LLM provider API keys (OpenAI, Anthropic, Google Gemini, Groq)
-- Agent settings (name, model, temperature)
-- Integration tokens (Telegram, Discord)
-- Web search API key (Brave)
-
-The configuration is saved to `~/.pocketclaw/config.json`. The wizard also creates workspace template files (AGENTS.md, SOUL.md, USER.md, TOOLS.md, IDENTITY.md, and memory/MEMORY.md) in your chosen workspace directory.
+### 📱 Android Integration
+*   Native JNI bindings for Android.
+*   Optimization for Termux environments (binary size < 20MB).
 
 ## Usage
 
-### Send a message
-
+### Installation
 ```bash
-pocketclaw agent -m "What is the weather today?"
+# Clone repository
+git clone https://github.com/0xboji/pocketclaw-rs
+cd picoclaw-rs
+
+# Build all components
+cargo build --release
 ```
 
-### Start the gateway server
-
+### Running the Agent (CLI)
 ```bash
-pocketclaw gateway
+# Start interactive session
+./target/release/pocketclaw-cli
 ```
 
-This starts the HTTP server on port 8080, along with any configured Telegram and Discord bots, the heartbeat service, and the cron scheduler.
-
-**Endpoints:**
-
-| Path          | Method | Description          |
-|:--------------|:-------|:---------------------|
-| `/health`     | GET    | Health check         |
-| `/api/status` | GET    | Service status (JSON)|
-
-### Check status
-
+### Running the Server (Gateway)
 ```bash
-pocketclaw status
+# Start API server
+./target/release/pocketclaw-server --port 3000
 ```
 
-Displays the current configuration state, including which providers and integrations are configured.
-
-### Manage scheduled tasks
-
+### Supervisor (Recommended for Production)
+The supervisor manages the server process, restarts it on crash, and rotates logs.
 ```bash
-# List all jobs
-pocketclaw cron list
-
-# Add a recurring job (every 3600 seconds)
-pocketclaw cron add --name "daily-summary" --message "Summarize today's events" --every 3600
-
-# Remove a job
-pocketclaw cron remove <job-id>
-
-# Enable or disable a job
-pocketclaw cron enable <job-id>
-pocketclaw cron disable <job-id>
+./target/release/pocketclaw-supervisor \
+  --command "./target/release/pocketclaw-server" \
+  --health-url "http://127.0.0.1:3000/health"
 ```
 
-### Manage skills
-
-```bash
-# List installed skills
-pocketclaw skills list
-
-# Show skill details
-pocketclaw skills show <skill-name>
-```
-
-Skills are directories inside your workspace's `skills/` folder. Each skill should contain a `SKILL.md` file describing its purpose and instructions.
-
-### Print version
-
-```bash
-pocketclaw --version
-```
-
-## Configuration
-
-The configuration file is located at `~/.pocketclaw/config.json`. You can edit it directly or re-run `pocketclaw onboard` to regenerate it.
-
-### Example configuration
-
+### Configuration
+Config is stored in `~/.pocketclaw/config.json`.
 ```json
 {
   "workspace": "/path/to/workspace",
   "agents": {
     "default": {
-      "model": "gpt-4o",
-      "system_prompt": "You are a helpful assistant.",
-      "max_tokens": 4096,
+      "model": "claude-3-5-sonnet-20240620",
       "temperature": 0.7
     }
   },
   "providers": {
-    "openai": {
-      "api_key": "sk-...",
-      "api_base": "https://api.openai.com/v1",
-      "model": "gpt-4o"
-    },
-    "anthropic": {
-      "api_key": "sk-ant-...",
-      "model": "claude-3-5-sonnet-20241022"
-    },
-    "google": {
-      "api_key": "...",
-      "model": "gemini-1.5-flash"
-    },
-    "groq": {
-      "api_key": "gsk_..."
-    }
+    "anthropic": { "api_key": "sk-..." }
   },
-  "telegram": {
-    "token": "123456:ABC..."
-  },
-  "discord": {
-    "token": "..."
-  },
-  "web": {
-    "brave_key": "..."
+  "attachment_policy": {
+    "enabled": true,
+    "max_size_bytes": 10485760,
+    "allowed_mime_types": ["image/png", "text/plain"]
   }
 }
 ```
 
-## Supported LLM Providers
-
-| Provider      | Models                          | Config Key   |
-|:--------------|:--------------------------------|:-------------|
-| OpenAI        | gpt-4o, gpt-4o-mini, etc.      | `openai`     |
-| OpenRouter    | Any model via OpenRouter        | `openrouter` |
-| Anthropic     | Claude 3.5 Sonnet, Opus, Haiku | `anthropic`  |
-| Google Gemini | gemini-1.5-flash, gemini-pro   | `google`     |
-| Groq          | whisper-large-v3 (voice only)  | `groq`       |
-
-## Built-in Tools
-
-| Tool        | Description                              |
-|:------------|:-----------------------------------------|
-| exec        | Execute shell commands in the workspace  |
-| read_file   | Read file contents                       |
-| write_file  | Write content to a file                  |
-| list_dir    | List directory contents                  |
-| web_fetch   | Fetch content from a URL                 |
-| web_search  | Search the web via Brave Search API      |
-
-## Architecture
-
-Microclaw is organized as a Cargo workspace with 11 crates:
-
-```
-pocketclaw-rs/
-  crates/
-    core/          # Config, MessageBus, types
-    agent/         # Agent loop, context builder, session management
-    providers/     # LLM provider implementations
-    tools/         # Tool trait and built-in tools
-    skills/        # Skill loading from workspace
-    server/        # HTTP gateway (Axum)
-    telegram/      # Telegram bot integration (Teloxide)
-    discord/       # Discord bot integration (Serenity)
-    cron/          # Scheduled task service
-    voice/         # Groq Whisper transcription
-    heartbeat/     # Periodic health check service
-    cli/           # CLI entry point (Clap)
-```
-
-### Key design decisions
-
-- **Modular crates**: Each concern is isolated in its own crate with explicit dependencies.
-- **Async runtime**: Tokio is used throughout for non-blocking I/O.
-- **Message bus**: A broadcast-based event bus decouples inbound and outbound message handling.
-- **Provider abstraction**: A common `LLMProvider` trait allows swapping providers without changing agent logic.
-- **Config-free commands**: Commands like `onboard`, `status`, and `cron` work without a pre-existing configuration file.
-
-## Workspace Files
-
-When you run `pocketclaw onboard`, the following template files are created in your workspace:
-
-| File               | Purpose                                      |
-|:-------------------|:---------------------------------------------|
-| `AGENTS.md`        | Agent behavior instructions and capabilities |
-| `SOUL.md`          | Personality and communication style          |
-| `USER.md`          | Information about the user                   |
-| `TOOLS.md`         | Available tools and usage guidelines         |
-| `IDENTITY.md`      | Agent identity and role definition           |
-| `memory/MEMORY.md` | Persistent memory and notes                  |
-
-These files are loaded automatically by the context builder when constructing prompts for the LLM.
-
-## Development
-
-```bash
-# Build in debug mode
-cargo build
-
-# Build in release mode
-cargo build --release
-
-# Run directly
-cargo run -- agent -m "Hello"
-
-# Check for errors without building
-cargo check
-```
-
-## License
-
-MIT
+## Security Model
+*   **Untrusted Skills**: Must be approved via `pocketclaw-cli skills approve <name>`.
+*   **Network Access**: All outbound requests are filtered. Internal subnets are blocked by default.
+*   **File Access**: `read_file` and `write_file` trapped within `workspace/`. Can be further restricted per skill.

@@ -1,5 +1,7 @@
+use pocketclaw_core::permissions::ApprovedSkills;
 use pocketclaw_core::types::{Message, Role};
 use pocketclaw_skills::SkillsLoader;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 /// Maximum number of conversation history messages to include in context.
@@ -9,14 +11,46 @@ const MAX_HISTORY_MESSAGES: usize = 20;
 pub struct ContextBuilder {
     workspace: PathBuf,
     skills_loader: SkillsLoader,
+    approved_skills: ApprovedSkills,
 }
 
 impl ContextBuilder {
     pub fn new(workspace: PathBuf) -> Self {
+        let approved_skills = ApprovedSkills::load(&ApprovedSkills::default_path());
         Self {
             workspace: workspace.clone(),
             skills_loader: SkillsLoader::new(workspace),
+            approved_skills,
         }
+    }
+
+    /// Get the set of tools allowed by currently approved skills.
+    /// If no skills are approved, returns empty set (unless core tools are implicitly allowed?).
+    /// Note: Core tools should probably be allowed by default or managed by a "core" skill.
+    /// For now, we'll assume core tools are NOT subject to skill permissions unless specified.
+    /// Wait, the user requirement "Default Deny" implies strictness.
+    /// But `registry.is_tool_allowed` returns true if allowed_tools is empty.
+    /// To enforce deny, we must pass a non-empty list if we want to restrict.
+    ///
+    /// Strategy:
+    /// - If no skills are approved, we might want to allow ONLY core tools (exec, fs, etc)?
+    /// - Or allow NOTHING?
+    ///
+    /// Let's return a list of tool names.
+    pub fn get_allowed_tools(&self) -> Vec<String> {
+        let mut allowed = HashSet::new();
+        let skills = self.skills_loader.list_skills();
+
+        for skill in skills {
+            if self.approved_skills.is_approved(&skill.name) {
+                if let Some(perms) = &skill.permissions {
+                    for tool in &perms.tools {
+                        allowed.insert(tool.clone());
+                    }
+                }
+            }
+        }
+        allowed.into_iter().collect()
     }
 
     pub fn build(
@@ -33,14 +67,25 @@ impl ContextBuilder {
 
         // 2. Summary (Long-term memory or compressed context)
         if let Some(s) = summary {
-             messages.push(Message::new("system", "global", Role::System, &format!("Previous conversation summary: {}", s)));
+            messages.push(Message::new(
+                "system",
+                "global",
+                Role::System,
+                &format!("Previous conversation summary: {}", s),
+            ));
         }
 
         // 3. Relevant Skills (load always-on skills)
+        // Only load APPROVED skills
         let skills = self.skills_loader.list_skills();
         for skill in skills {
-            if skill.always && skill.available {
-                messages.push(Message::new("system", "global", Role::System, &format!("Skill: {}\n{}", skill.name, skill.content)));
+            if self.approved_skills.is_approved(&skill.name) && skill.always && skill.available {
+                messages.push(Message::new(
+                    "system",
+                    "global",
+                    Role::System,
+                    &format!("Skill: {}\n{}", skill.name, skill.content),
+                ));
             }
         }
 
@@ -63,7 +108,12 @@ impl ContextBuilder {
         messages.extend_from_slice(history_window);
 
         // 5. Current Message
-        messages.push(Message::new("cli", "current", Role::User, current_message));
+        messages.push(Message::new(
+            "cli",
+            "current",
+            Role::User,
+            current_message,
+        ));
 
         messages
     }

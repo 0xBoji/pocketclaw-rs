@@ -253,14 +253,14 @@ impl CronService {
                     .map(|ch| format!("cron:{}", ch))
                     .unwrap_or_else(|| format!("cron:{}", job.id));
 
-                let msg = Message {
-                    id: Uuid::new_v4(),
-                    channel: "cron".to_string(),
-                    session_key,
-                    content: job.payload.message.clone(),
-                    role: Role::User,
-                    metadata: Default::default(),
-                };
+                let mut msg = Message::new(
+                    "cron",
+                    &session_key,
+                    Role::User,
+                    &job.payload.message,
+                ).with_sender("system");
+                
+                msg.metadata.insert("cron_job_id".to_string(), job.id.clone());
 
                 if let Err(e) = bus.publish(Event::InboundMessage(msg)) {
                     error!(job_id = %job.id, "Failed to publish cron job: {}", e);

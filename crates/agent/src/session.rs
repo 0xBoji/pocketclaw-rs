@@ -1,185 +1,108 @@
-use pocketclaw_core::types::Message;
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use tokio::fs;
-
+use std::sync::{Arc, RwLock};
+use std::time::{Duration, Instant};
+use pocketclaw_core::types::Message;
+use pocketclaw_persistence::SqliteSessionStore;
 use crate::sheets::SheetsClient;
+use tracing::{error, info};
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Session {
-    pub history: Vec<Message>,
-    pub summary: Option<String>,
-}
-
+#[derive(Clone)]
 pub struct SessionManager {
-    sessions: Arc<RwLock<HashMap<String, Session>>>,
-    storage_path: PathBuf,
+    store: SqliteSessionStore,
     sheets_client: Option<SheetsClient>,
+    last_summary: Arc<RwLock<HashMap<String, Instant>>>,
 }
 
 impl SessionManager {
-    pub fn new(workspace: PathBuf, sheets_client: Option<SheetsClient>) -> Self {
-        let storage_path = workspace.join("sessions");
-        
-        Self {
-            sessions: Arc::new(RwLock::new(HashMap::new())),
-            storage_path,
+    pub fn new(store: SqliteSessionStore, sheets_client: Option<SheetsClient>) -> Self {
+        Self { 
+            store, 
             sheets_client,
-        }
-    }
-
-    async fn load_session(&self, session_key: &str) -> Session {
-        // Try to load from Google Sheets first if configured
-        if let Some(client) = &self.sheets_client {
-            match client.load_session(session_key).await {
-                Ok(Some(session)) => {
-                    // Update local file cache for redundancy
-                    self.save_session_local(session_key, &session).await;
-                    return session;
-                }
-                Ok(None) => {
-                    // Sheet doesn't exist, proceed to local (maybe new session or local only)
-                }
-                Err(e) => {
-                    tracing::error!("Failed to load session from Google Sheets: {}", e);
-                    // Fallback to local
-                }
-            }
-        }
-
-        // Fallback to local file
-        self.load_session_local(session_key).await
-    }
-
-    async fn load_session_local(&self, session_key: &str) -> Session {
-        let safe_key = session_key.replace(":", "_");
-        let file_path = self.storage_path.join(format!("{}.json", safe_key));
-        
-        if file_path.exists() {
-             if let Ok(content) = fs::read_to_string(&file_path).await {
-                 if let Ok(session) = serde_json::from_str(&content) {
-                     return session;
-                 }
-             }
-        }
-        Session::default()
-    }
-    
-    async fn save_session(&self, session_key: &str, session: &Session) {
-        // Save locally
-        self.save_session_local(session_key, session).await;
-        
-        // TODO: Sync summary updates to Google Sheets (requires update_summary in sheets.rs)
-    }
-
-    async fn save_session_local(&self, session_key: &str, session: &Session) {
-        if !self.storage_path.exists() {
-             let _ = fs::create_dir_all(&self.storage_path).await;
-        }
-
-        let safe_key = session_key.replace(":", "_");
-        let file_path = self.storage_path.join(format!("{}.json", safe_key));
-        
-        if let Ok(content) = serde_json::to_string_pretty(session) {
-            let _ = fs::write(file_path, content).await;
+            last_summary: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     pub async fn get_history(&self, session_key: &str) -> Vec<Message> {
-        let mut sessions = self.sessions.write().await;
-        
-        if let Some(session) = sessions.get(session_key) {
-            return session.history.clone();
+        // Fetch up to 100 messages for context
+        match self.store.get_history(session_key, 100).await {
+            Ok(history) => history,
+            Err(e) => {
+                error!("Failed to load session history for {}: {}", session_key, e);
+                Vec::new()
+            }
         }
-        
-        // Try load from disk / sheets
-        let session = self.load_session(session_key).await;
-        let history = session.history.clone();
-        sessions.insert(session_key.to_string(), session);
-        
-        history
     }
 
     pub async fn add_message(&self, session_key: &str, message: Message) {
-        let mut sessions = self.sessions.write().await;
-        let session = sessions.entry(session_key.to_string()).or_insert_with(Session::default);
-        session.history.push(message.clone());
-        
-        // Persist to disk
-        self.save_session_local(session_key, session).await;
+        // Persist to SQLite
+        if let Err(e) = self.store.add_message(&message).await {
+            error!("Failed to save message to SQLite: {}", e);
+        }
 
-        // Persist to sheets (append only new message)
+        // Persist to sheets (append only)
         if let Some(client) = &self.sheets_client {
-            // We spawn this to not block the main loop latency
             let client = client.clone();
             let session_key = session_key.to_string();
             let msg = message.clone();
             tokio::spawn(async move {
                 if let Err(e) = client.append_message(&session_key, &msg).await {
-                    tracing::error!("Failed to append to Google Sheets: {}", e);
+                    error!("Failed to append to Google Sheets: {}", e);
                 }
             });
         }
     }
 
     pub async fn get_summary(&self, session_key: &str) -> Option<String> {
-        let mut sessions = self.sessions.write().await;
-        
-        if let Some(session) = sessions.get(session_key) {
-            return session.summary.clone();
+        match self.store.get_summary(session_key).await {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Failed to load summary: {}", e);
+                None
+            }
         }
-
-        let session = self.load_session(session_key).await;
-        let summary = session.summary.clone();
-        sessions.insert(session_key.to_string(), session);
-        
-        summary
     }
 
     pub async fn set_summary(&self, session_key: &str, summary: String) {
-        let mut sessions = self.sessions.write().await;
-        let session = sessions.entry(session_key.to_string()).or_insert_with(Session::default);
-        session.summary = Some(summary);
-        
-        self.save_session(session_key, session).await;
+        if let Err(e) = self.store.set_summary(session_key, summary).await {
+            error!("Failed to save summary: {}", e);
+        }
     }
 
-    /// Auto-summarize and trim history when it exceeds the threshold.
-    /// Keeps the last `keep` messages and compresses older ones into summary.
+    pub fn should_summarize(&self, session_key: &str, history_len: usize) -> bool {
+        if history_len < 30 {
+            return false;
+        }
+
+        let last = {
+            let map = self.last_summary.read().unwrap();
+            map.get(session_key).copied()
+        };
+
+        if let Some(last_time) = last {
+            if last_time.elapsed() < Duration::from_secs(300) {
+                return false;
+            }
+        }
+        
+        true
+    }
+
+    pub fn mark_summarized(&self, session_key: &str) {
+        let mut map = self.last_summary.write().unwrap();
+        map.insert(session_key.to_string(), Instant::now());
+    }
+
+    /// Trim history in the database, keeping only the most recent `keep` messages.
     pub async fn auto_trim_history(&self, session_key: &str, keep: usize) {
-        let mut sessions = self.sessions.write().await;
-        let session = sessions.entry(session_key.to_string()).or_insert_with(Session::default);
-
-        if session.history.len() <= keep {
-            return;
+        match self.store.trim_history(session_key, keep as i64).await {
+            Ok(deleted) => {
+                if deleted > 0 {
+                    info!(session = %session_key, deleted = %deleted, "Trimmed session history");
+                }
+            }
+            Err(e) => {
+                error!("Failed to trim history: {}", e);
+            }
         }
-
-        // Split: older messages get summarized, recent ones stay
-        let split_at = session.history.len() - keep;
-        let older: Vec<_> = session.history.drain(..split_at).collect();
-
-        // Build a simple summary from older messages
-        let mut summary_parts = Vec::new();
-        if let Some(existing) = &session.summary {
-            summary_parts.push(existing.clone());
-        }
-        for msg in &older {
-            let role = format!("{:?}", msg.role);
-            // Truncate long messages in summary
-            let content = if msg.content.len() > 100 {
-                format!("{}...", &msg.content[..100])
-            } else {
-                msg.content.clone()
-            };
-            summary_parts.push(format!("[{}] {}", role, content));
-        }
-        session.summary = Some(summary_parts.join("\n"));
-
-        // Persist trimmed session
-        self.save_session(session_key, session).await;
     }
 }

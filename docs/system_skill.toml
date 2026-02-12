@@ -1,0 +1,21 @@
+[metadata]
+name = "system"
+version = "1.0.0"
+description = "Core system capabilities for PocketClaw. Grants access to file operations, command execution, and web fetching."
+always = true
+
+[requirements]
+bins = ["curl", "git"]
+env = ["HOME"]
+
+[permissions]
+tools = [
+    "exec_cmd",
+    "read_file",
+    "write_file",
+    "list_dir",
+    "web_fetch",
+    "web_search"
+]
+fs_scope = "workspace"
+max_exec_timeout = 60

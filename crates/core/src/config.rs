@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use config::{Config, ConfigError, File};
 use std::path::PathBuf;
+use crate::attachment::AttachmentPolicy;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AppConfig {
@@ -11,6 +12,8 @@ pub struct AppConfig {
     pub discord: Option<DiscordConfig>,
     pub web: Option<WebConfig>,
     pub google_sheets: Option<GoogleSheetsConfig>,
+    #[serde(default)]
+    pub attachment_policy: AttachmentPolicy,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

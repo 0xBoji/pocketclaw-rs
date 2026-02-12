@@ -1,0 +1,16 @@
+[package]
+name = "pocketclaw-supervisor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "time", "process", "macros", "fs", "signal"] }
+tracing.workspace = true
+tracing-appender = "0.2"
+tracing-subscriber.workspace = true
+reqwest.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+chrono.workspace = true

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 use regex::Regex;
 use std::fs;
+use tracing::{warn, error};
 
 #[derive(Debug, Clone)]
 pub struct Skill {
@@ -14,6 +15,7 @@ pub struct Skill {
     pub always: bool,
     pub available: bool,
     pub missing_requirements: Vec<String>,
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -24,6 +26,23 @@ pub struct SkillMetadata {
     pub always: bool,
     pub requires: Option<SkillRequirements>,
     pub permissions: Option<SkillPermissions>,
+}
+
+/// The TOML manifest structure for skill.toml
+#[derive(Debug, Clone, Deserialize)]
+pub struct SkillManifest {
+    pub metadata: ManifestMetadata,
+    pub permissions: Option<SkillPermissions>,
+    pub requirements: Option<SkillRequirements>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ManifestMetadata {
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    #[serde(default)]
+    pub always: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -71,15 +90,42 @@ impl SkillsLoader {
             return skills;
         }
 
-        for entry in WalkDir::new(skills_dir).min_depth(1).max_depth(2) {
-            let entry = match entry {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
+        // We only want to look at immediate subdirectories of "skills"
+        let entries = match fs::read_dir(&skills_dir) {
+            Ok(e) => e,
+            Err(e) => {
+                warn!("Failed to read skills directory: {}", e);
+                return skills;
+            }
+        };
 
-            if entry.file_name() == "SKILL.md" {
-                if let Ok(skill) = self.load_skill(entry.path().to_path_buf()) {
-                    skills.push(skill);
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+
+            // Check for skill.toml first (A6: Manifest file)
+            let manifest_path = path.join("skill.toml");
+            if manifest_path.exists() {
+                match self.load_skill_from_manifest(&manifest_path) {
+                    Ok(skill) => {
+                        skills.push(skill);
+                        continue;
+                    }
+                    Err(e) => {
+                        warn!("Failed to load skill manifest at {:?}: {}", manifest_path, e);
+                        // Fallthrough to try SKILL.md? No, simpler to prioritize manifest if present.
+                    }
+                }
+            }
+
+            // Fallback to SKILL.md (Legacy)
+            let skill_md_path = path.join("SKILL.md");
+            if skill_md_path.exists() {
+                match self.load_skill_md(&skill_md_path) {
+                    Ok(skill) => skills.push(skill),
+                    Err(e) => warn!("Failed to load SKILL.md at {:?}: {}", skill_md_path, e),
                 }
             }
         }
@@ -87,8 +133,37 @@ impl SkillsLoader {
         skills
     }
 
-    fn load_skill(&self, path: PathBuf) -> anyhow::Result<Skill> {
-        let content = fs::read_to_string(&path)?;
+    /// Load skill from skill.toml + README.md (or just description)
+    fn load_skill_from_manifest(&self, path: &PathBuf) -> anyhow::Result<Skill> {
+        let content = fs::read_to_string(path)?;
+        let manifest: SkillManifest = toml::from_str(&content)?;
+
+        // Attempt to load content from README.md in the same dir
+        let readme_path = path.parent().unwrap().join("README.md");
+        let body = if readme_path.exists() {
+            fs::read_to_string(readme_path).unwrap_or_else(|_| manifest.metadata.description.clone())
+        } else {
+            manifest.metadata.description.clone()
+        };
+
+        let (available, missing) = self.check_requirements(&manifest.requirements);
+
+        Ok(Skill {
+            name: manifest.metadata.name,
+            description: manifest.metadata.description,
+            content: body,
+            requirements: manifest.requirements,
+            permissions: manifest.permissions,
+            always: manifest.metadata.always,
+            available,
+            missing_requirements: missing,
+            version: Some(manifest.metadata.version),
+        })
+    }
+
+    /// Load legacy SKILL.md format
+    fn load_skill_md(&self, path: &PathBuf) -> anyhow::Result<Skill> {
+        let content = fs::read_to_string(path)?;
         let (frontmatter_str, body) = self.extract_frontmatter(&content);
 
         let metadata: SkillMetadata = serde_json::from_str(&frontmatter_str)
@@ -111,6 +186,7 @@ impl SkillsLoader {
             always: metadata.always,
             available,
             missing_requirements: missing,
+            version: None,
         })
     }
 
@@ -119,10 +195,6 @@ impl SkillsLoader {
         if let Some(caps) = re.captures(content) {
             let frontmatter = caps.get(1).map(|m| m.as_str()).unwrap_or("");
             let body = caps.get(2).map(|m| m.as_str()).unwrap_or(content);
-            // YAML frontmatter might be JSON in the original Go code, 
-            // but let's assume it's JSON for now based on the Go struct tags `json:...`.
-            // Wait, the Go code uses `json.Unmarshal`. So it expects JSON in frontmatter!
-             // That's unusual but I will stick to it.
             return (frontmatter.to_string(), body);
         }
         ("{}".to_string(), content)

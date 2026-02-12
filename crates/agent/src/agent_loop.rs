@@ -8,6 +8,8 @@ use pocketclaw_tools::registry::ToolRegistry;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
+use serde_json::json;
+use pocketclaw_core::audit::log_audit_internal;
 
 /// Maximum tool-call loop iterations before the agent stops.
 const MAX_ITERATIONS: usize = 10;
@@ -45,22 +47,17 @@ impl AgentLoop {
     }
 
     pub async fn run(&self) {
-        let mut rx = self.bus.subscribe();
+        let mut rx = self.bus.subscribe_inbound();
 
         info!("Agent loop started");
 
         loop {
             match rx.recv().await {
-                Ok(event) => {
-                    match event {
-                        Event::InboundMessage(msg) => {
-                            self.process_message(msg).await;
-                        }
-                        _ => {}
-                    }
+                Ok(msg) => {
+                    self.process_message(msg).await;
                 }
                 Err(broadcast::error::RecvError::Lagged(count)) => {
-                    error!("Agent loop lagged by {} messages", count);
+                    error!("Agent loop lagged by {} inbound messages (queue full)", count);
                 }
                 Err(broadcast::error::RecvError::Closed) => {
                     info!("Bus closed, stopping agent loop");
@@ -131,8 +128,13 @@ impl AgentLoop {
             &msg.content,
         );
 
-        // 3. Prepare Tools
-        let tool_defs = self.tools.list_definitions().await;
+        // 3. Prepare Tools (Filtered by Permissions)
+        let allowed_tools = self.context_builder.get_allowed_tools();
+        let tool_defs = self.tools.list_definitions_for_permissions(&allowed_tools).await;
+
+        if allowed_tools.is_empty() {
+            warn!("No skills approved (or no tools allowed). Agent is running with 0 tools.");
+        }
 
         // 4. Initial LLM Call
         let options = GenerationOptions {
@@ -168,7 +170,17 @@ impl AgentLoop {
                     session = %msg.session_key,
                     "LLM token usage"
                 );
-            }
+
+                log_audit_internal(
+                    "llm_completion",
+                    &msg.session_key,
+                    json!({
+                        "model": options.model,
+                        "input_tokens": usage.input_tokens,
+                        "output_tokens": usage.output_tokens,
+                        "iteration": iteration
+                    })
+                );
 
             // Add assistant response to context
             current_messages.push(Message::new(
@@ -182,6 +194,30 @@ impl AgentLoop {
             if !response.tool_calls.is_empty() {
                 for tool_call in response.tool_calls {
                     info!("Executing tool: {}", tool_call.name);
+
+                    // Enforce Default Deny at execution time (Defense in Depth)
+                    if !ToolRegistry::is_tool_allowed(&tool_call.name, &allowed_tools) {
+                         warn!("Blocked tool execution: '{}' not in allowed list", tool_call.name);
+                         
+                         log_audit_internal(
+                             "security_violation",
+                             &msg.session_key,
+                             json!({
+                                 "type": "tool_blocked",
+                                 "tool": tool_call.name,
+                                 "reason": "default_deny"
+                             })
+                         );
+
+                         // feedback to agent
+                         current_messages.push(Message::new(
+                            "tool",
+                            &msg.session_key,
+                            Role::Tool,
+                            &format!("Error: Tool '{}' is not authorized by any active skill.", tool_call.name),
+                        ));
+                        continue;
+                    }
                     
                     let start = std::time::Instant::now();
                     let result = if let Some(tool) = self.tools.get(&tool_call.name).await {
@@ -210,6 +246,18 @@ impl AgentLoop {
                         !result.starts_with("Error") && !result.starts_with("Permission denied") && !result.starts_with("Tool not found"),
                     ).await;
 
+                    log_audit_internal(
+                        "tool_execution",
+                        &msg.session_key,
+                        json!({
+                            "tool": tool_call.name,
+                            "args": tool_call.arguments, // string
+                            "output_preview": if result.len() > 200 { &result[..200] } else { &result },
+                            "duration_ms": elapsed.as_millis(),
+                            "success": !result.starts_with("Error")
+                        })
+                    );
+
                     let mut tool_msg = Message::new(
                         "agent",
                         &msg.session_key,
@@ -237,8 +285,8 @@ impl AgentLoop {
             // Publish Outbound
             let _ = self.bus.publish(Event::OutboundMessage(response_msg));
 
-            // Auto-trim history if it's getting long
-            self.sessions.auto_trim_history(&msg.session_key, HISTORY_TRIM_THRESHOLD).await;
+            // Auto-summarize and trim history
+            self.maybe_summarize_and_trim(&msg.session_key).await;
             return;
         }
 
@@ -255,5 +303,54 @@ impl AgentLoop {
                 MAX_ITERATIONS
             ),
         );
+    }
+
+    async fn maybe_summarize_and_trim(&self, session_key: &str) {
+        let history = self.sessions.get_history(session_key).await;
+        
+        if self.sessions.should_summarize(session_key, history.len()) {
+            info!(session = %session_key, "Auto-summarizing session history...");
+
+            let system_prompt = "You are a helpful assistant. Summarize the conversation history concisely.";
+            let user_prompt = format!("Summarize the following conversation into a concise paragraph:\n\n{}", 
+                history.iter().map(|m| format!("{:?}: {}", m.role, m.content)).collect::<Vec<_>>().join("\n")
+            );
+
+            let messages = vec![
+                Message::new("system", session_key, Role::System, system_prompt),
+                Message::new("user", session_key, Role::User, &user_prompt),
+            ];
+            
+            let options = GenerationOptions {
+                model: self.config.agents.default.model.clone(),
+                max_tokens: Some(500),
+                temperature: Some(0.3),
+            };
+
+            let tool_defs = vec![]; 
+
+            match self.call_llm_with_retry(&messages, &tool_defs, &options).await {
+                Ok(resp) => {
+                    let summary = resp.content;
+                    self.sessions.set_summary(session_key, summary.clone()).await;
+                    self.sessions.mark_summarized(session_key);
+                    
+                    if let Some(usage) = resp.usage {
+                        info!(
+                            session = %session_key,
+                            input_tokens = usage.input_tokens,
+                            output_tokens = usage.output_tokens,
+                            "Auto-summary cost"
+                        );
+                    }
+                    
+                    // Summarized! Now trim to keep last 10 messages
+                    self.sessions.auto_trim_history(session_key, 10).await;
+                },
+                Err(e) => {
+                    error!(session = %session_key, "Failed to auto-summarize: {}", e);
+                }
+            }
+        }
     }
 }

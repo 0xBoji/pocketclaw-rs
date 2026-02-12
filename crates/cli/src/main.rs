@@ -22,7 +22,8 @@ use pocketclaw_tools::web_search::WebSearchTool;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{error, info, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_appender;
 
 const VERSION: &str = "0.1.0";
 
@@ -109,6 +110,16 @@ enum SkillsActions {
         /// Skill name
         name: String,
     },
+    /// Approve a skill for use
+    Approve {
+        /// Skill name
+        name: String,
+    },
+    /// Revoke approval for a skill
+    Revoke {
+        /// Skill name
+        name: String,
+    },
 }
 
 mod onboard;
@@ -124,11 +135,37 @@ fn get_cron_store_path() -> PathBuf {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialize logging
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    // Initialize logging
+    let (non_blocking, _guard) = tracing_appender::non_blocking(tracing_appender::rolling::daily(
+        get_config_dir().join("logs"),
+        "audit.jsonl",
+    ));
+
+    let audit_layer = tracing_subscriber::fmt::layer()
+        .with_writer(non_blocking)
+        .with_target(false)
+        .with_level(false)
+        .with_file(false)
+        .with_line_number(false)
+        .without_time() // Timestamp is in JSON
+        .with_filter(tracing_subscriber::filter::Targets::new().with_target("audit", Level::INFO));
+
+    let stdout_filter = tracing_subscriber::EnvFilter::from_default_env()
+        .add_directive(Level::INFO.into());
+        // We want to exclude "audit" target from stdout, but EnvFilter doesn't support exclusion easily.
+        // We'll rely on the fact that we can wrap stdout layer with a filter_fn.
+
+    let stdout_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stdout)
+        .with_filter(stdout_filter)
+        .with_filter(tracing_subscriber::filter::filter_fn(|metadata| {
+            metadata.target() != "audit"
+        }));
+
+    tracing_subscriber::registry()
+        .with(stdout_layer)
+        .with(audit_layer)
+        .init();
 
     let cli = Cli::parse();
 
@@ -192,8 +229,27 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    let db_path = workspace.join("pocketclaw.db");
+    let store_url = format!("sqlite://{}?mode=rwc", db_path.display()); // rwc = read write create
+    let store = pocketclaw_persistence::SqliteSessionStore::new(&store_url).await?;
+
+    let sheets_client = if let Some(sheets_cfg) = &config.google_sheets {
+        match pocketclaw_agent::sheets::SheetsClient::new(
+            sheets_cfg.service_account_json.clone(),
+            sheets_cfg.spreadsheet_id.clone(),
+        ).await {
+            Ok(client) => Some(client),
+            Err(e) => {
+                error!("Failed to initialize SheetsClient: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     let context_builder = ContextBuilder::new(workspace.clone());
-    let sessions = SessionManager::new(workspace.clone(), None);
+    let sessions = SessionManager::new(store, sheets_client);
 
     let agent = AgentLoop::new(
         bus.clone(),
@@ -477,13 +533,58 @@ fn run_skills(action: &SkillsActions, workspace: &std::path::Path) {
         }
         SkillsActions::Show { name } => {
             let skill_path = skills_dir.join(name).join("SKILL.md");
-            match std::fs::read_to_string(&skill_path) {
-                Ok(content) => {
-                    println!("\n📦 Skill: {}", name);
-                    println!("----------------------");
-                    println!("{}", content);
+            // Check manifest first
+            let manifest_path = skills_dir.join(name).join("skill.toml");
+            
+            if manifest_path.exists() {
+                 match std::fs::read_to_string(&manifest_path) {
+                    Ok(content) => {
+                        println!("\n📦 Skill: {} (Manifest)", name);
+                        println!("----------------------");
+                        println!("{}", content);
+                    }
+                    Err(_) => println!("✗ Failed to read manifest for '{}'", name),
                 }
-                Err(_) => println!("✗ Skill '{}' not found", name),
+            } else if skill_path.exists() {
+                match std::fs::read_to_string(&skill_path) {
+                    Ok(content) => {
+                        println!("\n📦 Skill: {} (Legacy)", name);
+                        println!("----------------------");
+                        println!("{}", content);
+                    }
+                    Err(_) => println!("✗ Skill '{}' not found", name),
+                }
+            } else {
+                println!("✗ Skill '{}' not found", name);
+            }
+        }
+        SkillsActions::Approve { name } => {
+            use pocketclaw_core::permissions::ApprovedSkills;
+            let mut approved = ApprovedSkills::load(&ApprovedSkills::default_path());
+            
+            // Verify skill exists?
+            // Yes, we should check if it exists in skills_dir
+            if !skills_dir.join(name).exists() {
+                println!("⚠️ Warning: Skill '{}' not found in workspace.", name);
+                println!("Approving anyway (maybe it will be installed later)...");
+            }
+            
+            approved.approve(name.clone());
+            if let Err(e) = approved.save(&ApprovedSkills::default_path()) {
+                println!("✗ Failed to save approved skills: {}", e);
+            } else {
+                println!("✓ Skill '{}' approved.", name);
+            }
+        }
+        SkillsActions::Revoke { name } => {
+            use pocketclaw_core::permissions::ApprovedSkills;
+            let mut approved = ApprovedSkills::load(&ApprovedSkills::default_path());
+            
+            approved.revoke(name);
+            if let Err(e) = approved.save(&ApprovedSkills::default_path()) {
+                println!("✗ Failed to save approved skills: {}", e);
+            } else {
+                println!("✓ Approval revoked for '{}'.", name);
             }
         }
     }

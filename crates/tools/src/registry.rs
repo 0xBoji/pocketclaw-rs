@@ -48,14 +48,16 @@ impl ToolRegistry {
     }
 
     /// Return tool definitions filtered by an allowed-tools list.
-    /// If `allowed_tools` is empty, returns ALL tools (backward compatible).
+    /// If `allowed_tools` is empty, returns NO tools (strict default deny).
     pub async fn list_definitions_for_permissions(
         &self,
         allowed_tools: &[String],
     ) -> Vec<serde_json::Value> {
+        // Strict Mode: Empty allowed list means NOTHING is allowed.
         if allowed_tools.is_empty() {
-            return self.list_definitions().await;
+            return Vec::new();
         }
+
         let tools = self.tools.read().await;
         tools.values()
             .filter(|t| allowed_tools.iter().any(|a| a == t.name()))
@@ -70,9 +72,9 @@ impl ToolRegistry {
     }
 
     /// Check if a tool name is in the allowed list.
-    /// If `allowed_tools` is empty, all tools are allowed (backward compatible).
+    /// If `allowed_tools` is empty, NO tools are allowed.
     pub fn is_tool_allowed(tool_name: &str, allowed_tools: &[String]) -> bool {
-        allowed_tools.is_empty() || allowed_tools.iter().any(|a| a == tool_name)
+        allowed_tools.iter().any(|a| a == tool_name)
     }
 
     /// Record metrics for a tool execution.

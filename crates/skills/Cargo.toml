@@ -17,3 +17,4 @@ anyhow.workspace = true
 walkdir.workspace = true
 regex.workspace = true
 which = "8.0.0"
+toml = "0.8"

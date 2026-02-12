@@ -44,14 +44,12 @@ impl TelegramBot {
                             "Received telegram message"
                         );
 
-                        let inbound = Message {
-                            id: Uuid::new_v4(),
-                            channel: "telegram".to_string(),
-                            session_key: session_key.clone(),
-                            content: text.to_string(),
-                            role: Role::User,
-                            metadata: Default::default(),
-                        };
+                        let inbound = Message::new(
+                            "telegram",
+                            &session_key,
+                            Role::User,
+                            text,
+                        ).with_sender(&sender_id);
 
                         if let Err(e) = bus.publish(Event::InboundMessage(inbound)) {
                             error!("Failed to publish telegram message: {}", e);
@@ -61,16 +59,18 @@ impl TelegramBot {
                     // Handle voice messages
                     if msg.voice().is_some() {
                         let chat_id = msg.chat.id;
+                        let sender_id = msg
+                            .from()
+                            .map(|u| u.id.0.to_string())
+                            .unwrap_or_default();
                         info!(chat_id = %chat_id, "Received voice message (transcription pending)");
 
-                        let inbound = Message {
-                            id: Uuid::new_v4(),
-                            channel: "telegram".to_string(),
-                            session_key: format!("telegram:{}", chat_id),
-                            content: "[Voice message received - transcription not yet integrated]".to_string(),
-                            role: Role::User,
-                            metadata: Default::default(),
-                        };
+                        let inbound = Message::new(
+                            "telegram",
+                            &format!("telegram:{}", chat_id),
+                            Role::User,
+                            "[Voice message received - transcription not yet integrated]",
+                        ).with_sender(&sender_id);
 
                         if let Err(e) = bus.publish(Event::InboundMessage(inbound)) {
                             error!("Failed to publish voice message: {}", e);
@@ -80,6 +80,10 @@ impl TelegramBot {
                     // Handle photo messages
                     if let Some(photos) = msg.photo() {
                         let chat_id = msg.chat.id;
+                        let sender_id = msg
+                            .from()
+                            .map(|u| u.id.0.to_string())
+                            .unwrap_or_default();
                         info!(
                             chat_id = %chat_id,
                             count = photos.len(),
@@ -87,14 +91,12 @@ impl TelegramBot {
                         );
 
                         let caption = msg.caption().unwrap_or("[Photo received]");
-                        let inbound = Message {
-                            id: Uuid::new_v4(),
-                            channel: "telegram".to_string(),
-                            session_key: format!("telegram:{}", chat_id),
-                            content: caption.to_string(),
-                            role: Role::User,
-                            metadata: Default::default(),
-                        };
+                        let inbound = Message::new(
+                            "telegram",
+                            &format!("telegram:{}", chat_id),
+                            Role::User,
+                            caption,
+                        ).with_sender(&sender_id);
 
                         if let Err(e) = bus.publish(Event::InboundMessage(inbound)) {
                             error!("Failed to publish photo message: {}", e);
@@ -104,6 +106,10 @@ impl TelegramBot {
                     // Handle document messages
                     if msg.document().is_some() {
                         let chat_id = msg.chat.id;
+                        let sender_id = msg
+                            .from()
+                            .map(|u| u.id.0.to_string())
+                            .unwrap_or_default();
                         let doc_name = msg
                             .document()
                             .and_then(|d| d.file_name.as_deref())
@@ -113,14 +119,12 @@ impl TelegramBot {
 
                         let caption_default = format!("[Document: {}]", doc_name);
                         let caption = msg.caption().unwrap_or(&caption_default);
-                        let inbound = Message {
-                            id: Uuid::new_v4(),
-                            channel: "telegram".to_string(),
-                            session_key: format!("telegram:{}", chat_id),
-                            content: caption.to_string(),
-                            role: Role::User,
-                            metadata: Default::default(),
-                        };
+                        let inbound = Message::new(
+                            "telegram",
+                            &format!("telegram:{}", chat_id),
+                            Role::User,
+                            caption,
+                        ).with_sender(&sender_id);
 
                         if let Err(e) = bus.publish(Event::InboundMessage(inbound)) {
                             error!("Failed to publish document message: {}", e);

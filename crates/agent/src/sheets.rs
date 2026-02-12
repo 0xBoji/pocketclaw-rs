@@ -125,14 +125,14 @@ impl SheetsClient {
                     Default::default()
                 };
 
-                history.push(Message {
-                    id: uuid::Uuid::new_v4(),
-                    channel: "sheets".to_string(),
-                    session_key: session_key.to_string(),
+                let mut msg = Message::new(
+                    "sheets",
+                    session_key,
                     role,
-                    content,
-                    metadata,
-                });
+                    &content,
+                );
+                msg.metadata = metadata;
+                history.push(msg);
             }
         }
 

@@ -1,4 +1,4 @@
-use crate::sandbox::SandboxConfig;
+use crate::sandbox::{is_private_ip, SandboxConfig};
 use crate::{Tool, ToolError};
 use async_trait::async_trait;
 use reqwest::Client;
@@ -39,7 +39,26 @@ fn extract_domain(url: &str) -> Option<String> {
     Some(domain.to_lowercase())
 }
 
-/// Simple HTML to text extractor (no OpenSSL dependency)
+/// Resolve a domain and check that none of its IPs are private (SSRF protection).
+async fn check_ssrf(domain: &str, port: u16) -> Result<(), ToolError> {
+    let addr_str = format!("{}:{}", domain, port);
+    let addrs = tokio::net::lookup_host(&addr_str).await.map_err(|e| {
+        ToolError::ExecutionError(format!("DNS resolution failed for '{}': {}", domain, e))
+    })?;
+
+    for addr in addrs {
+        if is_private_ip(&addr.ip()) {
+            return Err(ToolError::ExecutionError(format!(
+                "Blocked: '{}' resolves to private/reserved IP {} (SSRF protection)",
+                domain, addr.ip()
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+/// Simple HTML to text extractor
 fn html_to_text(html: &str) -> (String, String) {
     let title = regex::Regex::new(r"(?is)<title>(.*?)</title>")
         .ok()
@@ -94,9 +113,10 @@ impl Tool for WebFetchTool {
         let args: FetchArgs = serde_json::from_value(args)
             .map_err(|e| ToolError::InvalidArgs(e.to_string()))?;
 
+        let domain = extract_domain(&args.url).unwrap_or_default();
+
         // Network allowlist check
         if !self.sandbox.network_allowlist.is_empty() {
-            let domain = extract_domain(&args.url).unwrap_or_default();
             if !self.sandbox.network_allowlist.iter().any(|d| domain.ends_with(d.as_str())) {
                 return Err(ToolError::ExecutionError(format!(
                     "Domain '{}' is not in the network allowlist",
@@ -105,9 +125,12 @@ impl Tool for WebFetchTool {
             }
         }
 
+        // SSRF protection: resolve DNS and block private IPs
+        let port = if args.url.starts_with("https://") { 443 } else { 80 };
+        check_ssrf(&domain, port).await?;
+
         info!(url = %args.url, "Fetching URL");
 
-        // 1. Fetch HTML
         let res = self.client
             .get(&args.url)
             .send()
@@ -122,10 +145,8 @@ impl Tool for WebFetchTool {
             .await
             .map_err(|e| ToolError::ExecutionError(format!("Failed to read text: {}", e)))?;
 
-        // 2. Extract text content
         let (title, text) = html_to_text(&html);
 
-        // Truncate if too long (respect sandbox output limit)
         let max_len = std::cmp::min(8000, self.sandbox.max_output_bytes);
         let content = if text.len() > max_len {
             format!("{}...\n\n[Truncated at {} chars]", &text[..max_len], max_len)

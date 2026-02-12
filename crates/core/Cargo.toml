@@ -16,3 +16,4 @@ thiserror.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 config.workspace = true
+infer.workspace = true

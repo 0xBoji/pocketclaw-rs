@@ -56,14 +56,12 @@ impl HeartbeatService {
                 let prompt = build_prompt(&workspace);
 
                 // Publish heartbeat prompt to bus so the agent processes it
-                let msg = Message {
-                    id: Uuid::new_v4(),
-                    channel: "heartbeat".to_string(),
-                    session_key: "heartbeat:system".to_string(),
-                    content: prompt.clone(),
-                    role: Role::User,
-                    metadata: Default::default(),
-                };
+                let msg = Message::new(
+                    "heartbeat",
+                    "heartbeat:system",
+                    Role::User,
+                    &prompt,
+                ).with_sender("system");
 
                 if let Err(e) = bus.publish(Event::InboundMessage(msg)) {
                     error!("Failed to publish heartbeat to bus: {}", e);

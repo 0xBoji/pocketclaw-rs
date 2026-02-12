@@ -1,4 +1,8 @@
 pub mod bus;
+pub mod audit;
 pub mod types;
 pub mod config;
 pub mod channel;
+pub mod secrets;
+pub mod permissions;
+pub mod attachment;

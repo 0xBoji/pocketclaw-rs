@@ -17,3 +17,4 @@ thiserror.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 uuid.workspace = true
+infer.workspace = true

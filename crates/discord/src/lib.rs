@@ -24,14 +24,12 @@ impl EventHandler for Handler {
         let session_key = format!("discord:{}", msg.channel_id);
         info!("Received discord message from channel {}", msg.channel_id);
 
-        let inbound = Message {
-            id: Uuid::new_v4(),
-            channel: "discord".to_string(),
-            session_key: session_key.clone(),
-            content: msg.content.clone(),
-            role: Role::User,
-            metadata: Default::default(),
-        };
+        let inbound = Message::new(
+            "discord",
+            &session_key,
+            Role::User,
+            &msg.content,
+        ).with_sender(&msg.author.id.to_string());
 
         if let Err(e) = self.bus.publish(Event::InboundMessage(inbound)) {
             error!("Failed to publish discord message: {}", e);

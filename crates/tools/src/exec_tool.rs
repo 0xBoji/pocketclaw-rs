@@ -1,3 +1,4 @@
+use std::os::unix::process::CommandExt;
 use crate::sandbox::{SandboxConfig, truncate_output};
 use crate::{Tool, ToolError};
 use async_trait::async_trait;
@@ -6,6 +7,9 @@ use serde_json::{json, Value};
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
 use tracing::warn;
+
+
+
 
 /// Patterns that are blocked from execution for safety.
 const BLOCKED_PATTERNS: &[&str] = &[
@@ -110,17 +114,59 @@ impl Tool for ExecTool {
 
         let deadline = Duration::from_secs(self.sandbox.exec_timeout_secs);
         let workspace = self.sandbox.workspace_path.to_string_lossy().to_string();
+        
+        // Clone config for closure
+        let start_config = self.sandbox.clone();
 
-        // Execute with timeout
-        let result = timeout(deadline, async {
-            Command::new("sh")
-                .arg("-c")
-                .arg(&args.command)
-                .current_dir(&workspace)
-                .output()
-                .await
-        })
-        .await;
+        let mut cmd = Command::new("sh");
+        
+        cmd.arg("-c")
+            .arg(&args.command)
+            .current_dir(&workspace)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .process_group(0);
+
+        #[cfg(unix)]
+        unsafe {
+            cmd.pre_exec(move || {
+                // RLIMIT_NPROC
+                if let Some(limit) = start_config.max_child_processes {
+                    let rlim = libc::rlimit {
+                        rlim_cur: limit as libc::rlim_t,
+                        rlim_max: limit as libc::rlim_t,
+                    };
+                    libc::setrlimit(libc::RLIMIT_NPROC, &rlim);
+                }
+
+                // RLIMIT_NOFILE
+                if let Some(limit) = start_config.max_open_files {
+                     let rlim = libc::rlimit {
+                        rlim_cur: limit as libc::rlim_t,
+                        rlim_max: limit as libc::rlim_t,
+                    };
+                    libc::setrlimit(libc::RLIMIT_NOFILE, &rlim);
+                }
+
+                // RLIMIT_CPU
+                if let Some(limit) = start_config.cpu_time_limit_secs {
+                     let rlim = libc::rlimit {
+                        rlim_cur: limit as libc::rlim_t,
+                        rlim_max: limit as libc::rlim_t,
+                    };
+                    libc::setrlimit(libc::RLIMIT_CPU, &rlim);
+                }
+
+                Ok(())
+            });
+        }
+
+        let mut child = cmd.spawn()
+            .map_err(|e| ToolError::ExecutionError(format!("Failed to spawn: {}", e)))?;
+
+        let pid = child.id().ok_or_else(|| ToolError::ExecutionError("Failed to get child PID".to_string()))?;
+
+        let result = timeout(deadline, child.wait_with_output()).await;
 
         match result {
             Ok(Ok(output)) => {
@@ -138,15 +184,35 @@ impl Tool for ExecTool {
                 if result.is_empty() {
                     Ok("(no output)".to_string())
                 } else {
-                    // Truncate output to max_output_bytes
                     Ok(truncate_output(&result, self.sandbox.max_output_bytes))
                 }
             }
             Ok(Err(e)) => Err(ToolError::ExecutionError(e.to_string())),
-            Err(_) => Err(ToolError::ExecutionError(format!(
-                "Command timed out after {}s",
-                self.sandbox.exec_timeout_secs
-            ))),
+            Err(_) => {
+                // Timeout: kill the entire process group
+                #[cfg(unix)]
+                {
+                    // Kill process group (negative PID = group)
+                    unsafe {
+                        // libc::killpg behaves differently on potential failure, but we try anyway
+                        libc::killpg(pid as libc::pid_t, libc::SIGKILL);
+                    }
+                }
+                #[cfg(not(unix))]
+                {
+                    // Fallback for non-Unix (best effort)
+                    // We can't use child.kill() here because child is moved.
+                    // We would need to use system command taskkill or similar if we really wanted to.
+                    // For now, accept that child is dropped and might linger if not perfectly handled by OS.
+                    // Actually, since child is dropped when future is cancelled, standard library doesn't kill it.
+                    // But we don't have handle.
+                }
+
+                Err(ToolError::ExecutionError(format!(
+                    "Command timed out after {}s (process group killed)",
+                    self.sandbox.exec_timeout_secs
+                )))
+            }
         }
     }
 }
