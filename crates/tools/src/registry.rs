@@ -3,15 +3,26 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Per-tool execution metrics.
+#[derive(Debug, Clone, Default)]
+pub struct ToolMetrics {
+    pub execution_count: u64,
+    pub success_count: u64,
+    pub failure_count: u64,
+    pub total_duration_ms: u64,
+}
+
 #[derive(Clone)]
 pub struct ToolRegistry {
     tools: Arc<RwLock<HashMap<String, Arc<dyn Tool>>>>,
+    metrics: Arc<RwLock<HashMap<String, ToolMetrics>>>,
 }
 
 impl ToolRegistry {
     pub fn new() -> Self {
         Self {
             tools: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -62,5 +73,23 @@ impl ToolRegistry {
     /// If `allowed_tools` is empty, all tools are allowed (backward compatible).
     pub fn is_tool_allowed(tool_name: &str, allowed_tools: &[String]) -> bool {
         allowed_tools.is_empty() || allowed_tools.iter().any(|a| a == tool_name)
+    }
+
+    /// Record metrics for a tool execution.
+    pub async fn record_metrics(&self, tool_name: &str, duration_ms: u64, success: bool) {
+        let mut metrics = self.metrics.write().await;
+        let entry = metrics.entry(tool_name.to_string()).or_default();
+        entry.execution_count += 1;
+        entry.total_duration_ms += duration_ms;
+        if success {
+            entry.success_count += 1;
+        } else {
+            entry.failure_count += 1;
+        }
+    }
+
+    /// Get metrics for all tools.
+    pub async fn get_metrics(&self) -> HashMap<String, ToolMetrics> {
+        self.metrics.read().await.clone()
     }
 }

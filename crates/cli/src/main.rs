@@ -184,12 +184,12 @@ async fn main() -> anyhow::Result<()> {
     tools.register(Arc::new(ReadFileTool::new(sandbox.clone()))).await;
     tools.register(Arc::new(WriteFileTool::new(sandbox.clone()))).await;
     tools.register(Arc::new(ListDirTool::new(sandbox.clone()))).await;
-    tools.register(Arc::new(WebFetchTool::new())).await;
+    tools.register(Arc::new(WebFetchTool::new(sandbox.clone()))).await;
 
     if let Some(web_cfg) = &config.web {
         if let Some(brave_key) = &web_cfg.brave_key {
             tools
-                .register(Arc::new(WebSearchTool::new(brave_key.clone())))
+                .register(Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone())))
                 .await;
         }
     }

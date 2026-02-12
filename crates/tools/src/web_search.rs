@@ -1,19 +1,24 @@
+use crate::sandbox::SandboxConfig;
 use crate::{Tool, ToolError};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tracing::info;
 
 pub struct WebSearchTool {
     api_key: String,
     client: Client,
+    #[allow(dead_code)]
+    sandbox: SandboxConfig,
 }
 
 impl WebSearchTool {
-    pub fn new(api_key: String) -> Self {
+    pub fn new(api_key: String, sandbox: SandboxConfig) -> Self {
         Self {
             api_key,
             client: Client::new(),
+            sandbox,
         }
     }
 }
@@ -66,6 +71,9 @@ impl Tool for WebSearchTool {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let args: SearchArgs = serde_json::from_value(args)
             .map_err(|e| ToolError::InvalidArgs(e.to_string()))?;
+
+        // Audit log — always log search queries
+        info!(query = %args.query, "Web search query");
 
         let url = "https://api.search.brave.com/res/v1/web/search";
         
