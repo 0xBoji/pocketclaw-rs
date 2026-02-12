@@ -14,5 +14,5 @@ android_logger = "0.13.3"
 log = "0.4"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 anyhow = { workspace = true }
-pocketclaw-cli = { path = "../cli" }
-pocketclaw-core = { path = "../core" }
+pocketclaw-cli = { workspace = true }
+pocketclaw-core = { workspace = true }

@@ -29,6 +29,10 @@ pocketclaw-cli = { path = "crates/cli" }
 pocketclaw-cron = { path = "crates/cron" }
 pocketclaw-voice = { path = "crates/voice" }
 pocketclaw-heartbeat = { path = "crates/heartbeat" }
+pocketclaw-persistence = { path = "crates/persistence" }
+pocketclaw-telegram = { path = "crates/telegram" }
+pocketclaw-discord = { path = "crates/discord" }
+pocketclaw-supervisor = { path = "crates/supervisor" }
 
 # Async Runtime
 tokio = { version = "1.36", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] } # Minimal features

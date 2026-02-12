@@ -7,25 +7,21 @@ license.workspace = true
 
 [dependencies]
 pocketclaw-core = { workspace = true }
-pocketclaw-agent = { path = "../agent" }
-pocketclaw-server = { path = "../server" }
-pocketclaw-voice = { path = "../voice" }
-pocketclaw-cron = { path = "../cron" }
-pocketclaw-heartbeat = { path = "../heartbeat" }
-pocketclaw-persistence = { path = "../persistence" }
+pocketclaw-agent = { workspace = true }
+pocketclaw-server = { workspace = true }
+pocketclaw-voice = { workspace = true }
+pocketclaw-cron = { workspace = true }
+pocketclaw-heartbeat = { workspace = true }
+pocketclaw-persistence = { workspace = true }
+pocketclaw-providers = { workspace = true }
+pocketclaw-tools = { workspace = true }
+pocketclaw-telegram = { workspace = true }
+pocketclaw-discord = { workspace = true }
 anyhow.workspace = true
 clap = { version = "4.4", features = ["derive"] }
-anyhow.workspace = true
-pocketclaw-providers.workspace = true
-pocketclaw-tools.workspace = true
-pocketclaw-telegram = { version = "0.1.0", path = "../telegram" }
-pocketclaw-discord = { version = "0.1.0", path = "../discord" }
 inquire = "0.9.3"
 dirs = "6.0.0"
 serde_json.workspace = true
-pocketclaw-cron = { workspace = true }
-pocketclaw-voice = { workspace = true }
-pocketclaw-heartbeat = { workspace = true }
 reqwest = { workspace = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
