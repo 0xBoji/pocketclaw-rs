@@ -57,6 +57,9 @@ pub fn create_provider(config: &AppConfig) -> anyhow::Result<Arc<dyn LLMProvider
 }
 
 pub async fn start_server(config_path: Option<PathBuf>) -> anyhow::Result<()> {
+    // Save config path before it's consumed
+    let config_path_saved = config_path.clone();
+
     // Load config
     let config = AppConfig::load(config_path).map_err(|e| {
         anyhow::anyhow!(
@@ -132,7 +135,16 @@ pub async fn start_server(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     info!("Heartbeat service started");
 
     // Start Cron Service in background
-    let cron_store = get_cron_store_path();
+    // Derive cron store path from config path or fall back to workspace
+    let cron_store = config_path_saved
+        .as_ref()
+        .and_then(|p| p.parent())
+        .map(|dir| dir.join("cron/jobs.json"))
+        .unwrap_or_else(|| workspace.join(".pocketclaw/cron/jobs.json"));
+    // Ensure cron directory exists
+    if let Some(parent) = cron_store.parent() {
+        let _ = tokio::fs::create_dir_all(parent).await;
+    }
     let _cron_service = CronService::new(cron_store);
     info!("Cron service initialized");
 
