@@ -1,8 +1,9 @@
 use inquire::{Confirm, Password, Select, Text};
 use pocketclaw_core::config::{
     AgentDefaultConfig, AgentsConfig, AnthropicConfig, AppConfig, DiscordConfig, GoogleConfig,
-    GroqConfig, ProviderConfig, ProvidersConfig, TelegramConfig, WebConfig, AttachmentPolicy
+    GroqConfig, ProviderConfig, ProvidersConfig, TelegramConfig, WebConfig,
 };
+use pocketclaw_core::attachment::AttachmentPolicy;
 use std::fs;
 use std::path::{Path, PathBuf};
 
