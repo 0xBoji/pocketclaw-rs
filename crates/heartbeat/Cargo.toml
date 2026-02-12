@@ -7,3 +7,5 @@ edition = "2021"
 tokio = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
+pocketclaw-core = { path = "../core" }
+uuid = { workspace = true, features = ["v4"] }

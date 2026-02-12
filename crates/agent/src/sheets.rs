@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use pocketclaw_core::types::{Message, Role};
-use reqwest::{Client, Response, StatusCode};
+use reqwest::{Client, Response};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use yup_oauth2::{ServiceAccountAuthenticator, AccessToken};
 use yup_oauth2::authenticator::Authenticator;
 use yup_oauth2::hyper_rustls::HttpsConnector;
 use hyper_util::client::legacy::connect::HttpConnector;
-use uuid::Uuid;
+
 
 use crate::session::Session;
 
@@ -102,7 +102,7 @@ impl SheetsClient {
         let rows = data.values.unwrap_or_default();
         
         let mut history = Vec::new();
-        let mut summary = None;
+        let summary = None;
 
         for (i, row) in rows.iter().enumerate() {
             if i == 0 { continue; } // Skip header

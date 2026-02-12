@@ -1,10 +1,13 @@
 use chrono::Local;
+use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::types::{Message, Role};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::time::{interval, Duration};
 use tracing::{error, info};
+use uuid::Uuid;
 
 pub struct HeartbeatService {
     workspace: PathBuf,
@@ -23,7 +26,9 @@ impl HeartbeatService {
         }
     }
 
-    pub fn start(&self) -> tokio::task::JoinHandle<()> {
+    /// Start the heartbeat loop. Publishes heartbeat prompts to the bus
+    /// so the agent can act on scheduled checks.
+    pub fn start(&self, bus: Arc<MessageBus>) -> tokio::task::JoinHandle<()> {
         let running = self.running.clone();
         let workspace = self.workspace.clone();
         let interval_secs = self.interval_secs;
@@ -49,6 +54,22 @@ impl HeartbeatService {
                 }
 
                 let prompt = build_prompt(&workspace);
+
+                // Publish heartbeat prompt to bus so the agent processes it
+                let msg = Message {
+                    id: Uuid::new_v4(),
+                    channel: "heartbeat".to_string(),
+                    session_key: "heartbeat:system".to_string(),
+                    content: prompt.clone(),
+                    role: Role::User,
+                    metadata: Default::default(),
+                };
+
+                if let Err(e) = bus.publish(Event::InboundMessage(msg)) {
+                    error!("Failed to publish heartbeat to bus: {}", e);
+                }
+
+                // Also log to file as audit trail
                 log_heartbeat(&workspace, &prompt);
             }
         })

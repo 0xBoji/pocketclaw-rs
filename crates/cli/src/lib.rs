@@ -162,7 +162,7 @@ pub async fn start_server(config_path: Option<PathBuf>) -> anyhow::Result<()> {
 
     // Start Heartbeat Service
     let heartbeat = HeartbeatService::new(workspace.clone(), 30 * 60, true);
-    heartbeat.start();
+    heartbeat.start(bus.clone());
     info!("Heartbeat service started");
 
     // Start Cron Service in background
