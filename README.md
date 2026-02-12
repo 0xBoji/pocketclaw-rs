@@ -2,6 +2,9 @@
 
 PocketClaw is a secure, high-performance AI agent runtime designed for mobile (Android/Termux) and server environments. It features a sandboxed execution environment, robust permission system, and multi-channel support (CLI, Telegram, Discord).
 
+> [!IMPORTANT]
+> **Android First**: This project is specifically optimized for Android environments via Termux. It includes JNI bindings for native integration and is designed to run efficiently on mobile hardware.
+
 ## Features
 
 ### 🛡️ Security & Sandboxing (Wave A)
@@ -24,43 +27,44 @@ PocketClaw is a secure, high-performance AI agent runtime designed for mobile (A
 *   **Supervisor**: Built-in watchdog binary (`pocketclaw-supervisor`) for auto-restart, healthchecks, and log rotation.
 
 ### 📱 Android Integration
-*   Native JNI bindings for Android.
+*   Native JNI bindings for Android integration.
 *   Optimization for Termux environments (binary size < 20MB).
 
-## Hướng Dẫn Cài Đặt & Sử Dụng (A-Z)
+---
 
-### Bước 1: Cài Đặt Dependencies
+## Installation & Usage Guide (A-Z)
+
+### Step 1: Install Dependencies
 ```bash
-# Cài Rust (nếu chưa có)
+# Install Rust (if not already installed)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
-# Verify
-rustc --version
-cargo --version
+# For Termux users, ensure you have the necessary build tools:
+# pkg install clang make binutils
 ```
 
-### Bước 2: Clone & Build
+### Step 2: Clone & Build
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/0xboji/pocketclaw-rs
 cd picoclaw-rs
 
-# Build tất cả components (CLI, Server, Supervisor)
+# Build all components (CLI, Server, Supervisor)
 cargo build --release
 
-# Binaries sẽ nằm trong target/release/:
+# Binaries will be located in target/release/:
 # - pocketclaw-cli
 # - pocketclaw-server  
 # - pocketclaw-supervisor
 ```
 
-### Bước 3: Tạo Config File
+### Step 3: Create Configuration File
 ```bash
-# Tạo thư mục config
+# Create the config directory
 mkdir -p ~/.pocketclaw
 
-# Tạo file config
+# Create the config file
 cat > ~/.pocketclaw/config.json << 'EOF'
 {
   "workspace": "./workspace",
@@ -87,35 +91,35 @@ cat > ~/.pocketclaw/config.json << 'EOF'
 }
 EOF
 
-# Tạo workspace directory
+# Create the workspace directory
 mkdir -p workspace
 ```
 
-### Bước 4: Chạy Agent
+### Step 4: Run the Agent
 
 #### Option A: CLI Mode (Interactive)
 ```bash
 ./target/release/pocketclaw-cli
 
-# Hoặc với custom config
+# Or with a custom config
 ./target/release/pocketclaw-cli --config ~/.pocketclaw/config.json
 ```
 
 #### Option B: Server Mode (API Gateway)
 ```bash
-# Chạy server trên port 3000
+# Run server on port 3000
 ./target/release/pocketclaw-server --port 3000
 
-# Test API
+# Test the API
 curl http://localhost:3000/health
 curl -X POST http://localhost:3000/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello, what can you do?"}'
 ```
 
-#### Option C: Production Mode (với Supervisor)
+#### Option C: Production Mode (with Supervisor)
 ```bash
-# Supervisor tự động restart nếu crash
+# Supervisor automatically restarts the process if it crashes
 ./target/release/pocketclaw-supervisor \
   --command "./target/release/pocketclaw-server" \
   --args "--port 3000" \
@@ -123,12 +127,12 @@ curl -X POST http://localhost:3000/api/message \
   --health-interval-secs 30 \
   --max-fails 3
 
-# Logs sẽ được ghi vào logs/supervisor.log
+# Logs will be written to logs/supervisor.log
 ```
 
-### Bước 5: Upload File (Attachment)
+### Step 5: Upload File (Attachment)
 ```bash
-# Upload file qua API
+# Upload a file via the API
 curl -X POST http://localhost:3000/api/attachment \
   -F "file=@/path/to/image.png"
 
@@ -142,9 +146,9 @@ curl -X POST http://localhost:3000/api/attachment \
 # }
 ```
 
-### Bước 6: Quản Lý Skills & Permissions
+### Step 6: Manage Skills & Permissions
 ```bash
-# Approve một skill
+# Approve a skill
 ./target/release/pocketclaw-cli skills approve my-skill
 
 # Revoke permission
@@ -154,10 +158,10 @@ curl -X POST http://localhost:3000/api/attachment \
 ./target/release/pocketclaw-cli skills list
 ```
 
-### Configuration Chi Tiết
+### Detailed Configuration
 
 #### Providers (LLM)
-Hỗ trợ nhiều providers:
+Supports multiple providers:
 ```json
 {
   "providers": {
