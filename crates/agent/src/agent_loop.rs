@@ -159,6 +159,17 @@ impl AgentLoop {
                 }
             };
 
+            // Log token usage for observability/cost tracking
+            if let Some(usage) = &response.usage {
+                info!(
+                    input_tokens = usage.input_tokens,
+                    output_tokens = usage.output_tokens,
+                    iteration = iteration,
+                    session = %msg.session_key,
+                    "LLM token usage"
+                );
+            }
+
             // Add assistant response to context
             current_messages.push(Message::new(
                 "agent", 

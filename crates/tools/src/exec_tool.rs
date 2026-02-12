@@ -5,6 +5,28 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
+use tracing::warn;
+
+/// Patterns that are blocked from execution for safety.
+const BLOCKED_PATTERNS: &[&str] = &[
+    "rm -rf /",
+    "rm -rf /*",
+    "sudo ",
+    "mkfs",
+    "dd if=",
+    ":(){",           // fork bomb
+    "> /dev/",        // overwrite devices
+    "chmod 777 /",
+    "chown root",
+    "pkill -9",
+    "killall",
+    "shutdown",
+    "reboot",
+    "init 0",
+    "init 6",
+    "format ",
+    "fdisk",
+];
 
 pub struct ExecTool {
     sandbox: SandboxConfig,
@@ -13,6 +35,17 @@ pub struct ExecTool {
 impl ExecTool {
     pub fn new(sandbox: SandboxConfig) -> Self {
         Self { sandbox }
+    }
+
+    /// Check if a command matches any blocked pattern.
+    fn is_command_blocked(command: &str) -> Option<&'static str> {
+        let lower = command.to_lowercase();
+        for pattern in BLOCKED_PATTERNS {
+            if lower.contains(pattern) {
+                return Some(pattern);
+            }
+        }
+        None
     }
 }
 
@@ -60,6 +93,19 @@ impl Tool for ExecTool {
             return Err(ToolError::ExecutionError(
                 "Command contains disallowed '..' sequence".to_string(),
             ));
+        }
+
+        // Block dangerous commands
+        if let Some(pattern) = Self::is_command_blocked(&args.command) {
+            warn!(
+                command = %args.command,
+                pattern = %pattern,
+                "Blocked dangerous command"
+            );
+            return Err(ToolError::ExecutionError(format!(
+                "Command blocked by security policy (matched: '{}')",
+                pattern
+            )));
         }
 
         let deadline = Duration::from_secs(self.sandbox.exec_timeout_secs);

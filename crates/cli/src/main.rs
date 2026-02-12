@@ -7,9 +7,7 @@ use pocketclaw_core::config::AppConfig;
 use pocketclaw_core::types::{Message, Role};
 use pocketclaw_cron::{CronSchedule, CronService};
 use pocketclaw_heartbeat::HeartbeatService;
-use pocketclaw_providers::anthropic::AnthropicProvider;
-use pocketclaw_providers::google::GoogleProvider;
-use pocketclaw_providers::openai::OpenAIProvider;
+use pocketclaw_providers::factory::create_provider;
 use pocketclaw_providers::LLMProvider;
 use pocketclaw_server::gateway::Gateway;
 use pocketclaw_core::channel::ChannelAdapter;
@@ -299,30 +297,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn create_provider(config: &AppConfig) -> anyhow::Result<Arc<dyn LLMProvider>> {
-    if let Some(openai_cfg) = &config.providers.openai {
-        Ok(Arc::new(OpenAIProvider::new(
-            openai_cfg.api_key.clone(),
-            openai_cfg.api_base.clone(),
-        )))
-    } else if let Some(openrouter_cfg) = &config.providers.openrouter {
-        Ok(Arc::new(OpenAIProvider::new(
-            openrouter_cfg.api_key.clone(),
-            openrouter_cfg.api_base.clone(),
-        )))
-    } else if let Some(anthropic_cfg) = &config.providers.anthropic {
-        Ok(Arc::new(AnthropicProvider::new(
-            anthropic_cfg.api_key.clone(),
-        )))
-    } else if let Some(google_cfg) = &config.providers.google {
-        Ok(Arc::new(GoogleProvider::new(
-            google_cfg.api_key.clone(),
-            google_cfg.model.clone(),
-        )))
-    } else {
-        anyhow::bail!("No LLM provider configured. Run 'pocketclaw onboard' to set one up.");
-    }
-}
+
 
 fn run_status() {
     let config_path = get_config_dir().join("config.json");

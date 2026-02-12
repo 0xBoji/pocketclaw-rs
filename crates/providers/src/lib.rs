@@ -1,6 +1,7 @@
 pub mod google;
 pub mod anthropic;
 pub mod openai;
+pub mod factory;
 use async_trait::async_trait;
 use pocketclaw_core::types::Message;
 
