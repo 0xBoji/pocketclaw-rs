@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 pocketclaw-core = { workspace = true }
 pocketclaw-agent = { workspace = true }
+pocketclaw-persistence = { workspace = true }
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -18,3 +19,5 @@ anyhow.workspace = true
 axum.workspace = true
 uuid.workspace = true
 infer.workspace = true
+hmac = "0.12"
+sha2 = "0.10"

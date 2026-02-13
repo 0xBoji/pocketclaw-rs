@@ -17,6 +17,11 @@ pocketclaw-providers = { workspace = true }
 pocketclaw-tools = { workspace = true }
 pocketclaw-telegram = { workspace = true }
 pocketclaw-discord = { workspace = true }
+pocketclaw-whatsapp = { workspace = true }
+pocketclaw-slack = { workspace = true }
+pocketclaw-teams = { workspace = true }
+pocketclaw-zalo = { workspace = true }
+pocketclaw-googlechat = { workspace = true }
 anyhow.workspace = true
 tokio.workspace = true
 clap = { version = "4.4", features = ["derive"] }

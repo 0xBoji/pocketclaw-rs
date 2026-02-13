@@ -32,6 +32,11 @@ pocketclaw-heartbeat = { path = "crates/heartbeat" }
 pocketclaw-persistence = { path = "crates/persistence" }
 pocketclaw-telegram = { path = "crates/telegram" }
 pocketclaw-discord = { path = "crates/discord" }
+pocketclaw-whatsapp = { path = "crates/whatsapp" }
+pocketclaw-slack = { path = "crates/slack" }
+pocketclaw-teams = { path = "crates/teams" }
+pocketclaw-zalo = { path = "crates/zalo" }
+pocketclaw-googlechat = { path = "crates/googlechat" }
 pocketclaw-supervisor = { path = "crates/supervisor" }
 
 # Async Runtime
@@ -55,7 +60,7 @@ clap = { version = "4.5", features = ["derive", "env"] } # Minimal features
 
 # HTTP (optimized for size)
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json", "stream", "multipart"] }
-axum = { version = "0.7", default-features = false, features = ["http1", "json", "matched-path", "tokio", "multipart"] } # Minimal features
+axum = { version = "0.7", default-features = false, features = ["http1", "json", "matched-path", "tokio", "multipart", "ws", "query"] } # Minimal features
 
 # Utils
 uuid = { version = "1.7", features = ["v4", "serde"] }

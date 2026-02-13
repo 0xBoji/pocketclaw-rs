@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use pocketclaw_core::types::{Message, Role};
+use serde::Serialize;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use tracing::{info, instrument};
 use uuid::Uuid;
@@ -8,6 +9,16 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct SqliteSessionStore {
     pool: SqlitePool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SessionInfo {
+    pub session_key: String,
+    pub title: Option<String>,
+    pub summary: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub message_count: i64,
 }
 
 impl SqliteSessionStore {
@@ -178,5 +189,43 @@ impl SqliteSessionStore {
         .context("Failed to trim history")?;
         
         Ok(result.rows_affected())
+    }
+
+    #[instrument(skip(self))]
+    pub async fn list_sessions(&self, limit: i64) -> Result<Vec<SessionInfo>> {
+        let rows = sqlx::query_as::<_, (String, Option<String>, Option<String>, DateTime<Utc>, DateTime<Utc>, i64)>(
+            r#"
+            SELECT
+                s.id,
+                s.title,
+                s.summary,
+                s.created_at,
+                s.updated_at,
+                COUNT(m.id) as message_count
+            FROM sessions s
+            LEFT JOIN messages m ON m.session_id = s.id
+            GROUP BY s.id
+            ORDER BY s.updated_at DESC
+            LIMIT ?
+            "#,
+        )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to list sessions")?;
+
+        Ok(rows
+            .into_iter()
+            .map(
+                |(session_key, title, summary, created_at, updated_at, message_count)| SessionInfo {
+                    session_key,
+                    title,
+                    summary,
+                    created_at,
+                    updated_at,
+                    message_count,
+                },
+            )
+            .collect())
     }
 }

@@ -231,7 +231,6 @@ impl AgentLoop {
                     self.metrics.inc_tool_calls();
                     let result = if let Some(tool) = self.tools.get(&tool_call.name).await {
                          // Permission guard
-                         let allowed_tools: Vec<String> = Vec::new();
                          if !ToolRegistry::is_tool_allowed(&tool_call.name, &allowed_tools) {
                              format!("Permission denied: tool '{}' is not allowed", tool_call.name)
                          } else {

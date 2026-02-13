@@ -24,6 +24,9 @@
             android:name=".SetupActivity"
             android:exported="false" />
         <activity
+            android:name=".SetupWizardActivity"
+            android:exported="false" />
+        <activity
             android:name=".wave.ControllerDashboardActivity"
             android:exported="false" />
         <activity
@@ -40,6 +43,9 @@
             android:exported="false" />
         <activity
             android:name=".wave.ResourceMonitorActivity"
+            android:exported="false" />
+        <activity
+            android:name=".wave.SessionLiveActivity"
             android:exported="false" />
         <activity
             android:name=".wave.SafetySandboxActivity"

@@ -5,19 +5,30 @@ use pocketclaw_agent::agent_loop::AgentLoop;
 use pocketclaw_agent::context::ContextBuilder;
 use pocketclaw_agent::session::SessionManager;
 use pocketclaw_core::bus::{Event, MessageBus};
+use pocketclaw_core::channel::{
+    is_native_channel_supported, CHANNEL_GOOGLE_CHAT, CHANNEL_IMESSAGE, CHANNEL_MATRIX,
+    CHANNEL_SIGNAL, CHANNEL_TEAMS, CHANNEL_WEBCHAT, CHANNEL_ZALO,
+};
 use pocketclaw_core::config::AppConfig;
 use pocketclaw_cron::CronService;
 use pocketclaw_heartbeat::HeartbeatService;
 use pocketclaw_providers::factory::create_provider;
 use pocketclaw_providers::LLMProvider;
-use pocketclaw_server::gateway::Gateway;
+use pocketclaw_server::gateway::{Gateway, GatewayRuntimeConfig};
 use pocketclaw_core::channel::ChannelAdapter;
 use pocketclaw_telegram::TelegramBot;
 use pocketclaw_discord::DiscordBot;
+use pocketclaw_slack::SlackAdapter;
+use pocketclaw_teams::TeamsAdapter;
+use pocketclaw_whatsapp::WhatsAppAdapter;
+use pocketclaw_zalo::ZaloAdapter;
+use pocketclaw_googlechat::GoogleChatAdapter;
 use pocketclaw_tools::sandbox::SandboxConfig;
 use pocketclaw_tools::exec_tool::ExecTool;
 use pocketclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
 use pocketclaw_tools::registry::ToolRegistry;
+use pocketclaw_tools::platform_tools::{ChannelHealthTool, DatetimeNowTool, MetricsSnapshotTool};
+use pocketclaw_tools::sessions_tools::{SessionsHistoryTool, SessionsListTool, SessionsSendTool};
 use pocketclaw_tools::web_fetch::WebFetchTool;
 use pocketclaw_tools::web_search::WebSearchTool;
 use pocketclaw_core::metrics::MetricsStore;
@@ -32,6 +43,184 @@ pub fn get_config_dir() -> PathBuf {
 
 pub fn get_cron_store_path() -> PathBuf {
     get_config_dir().join("cron/jobs.json")
+}
+
+fn log_channel_readiness(config: &AppConfig) {
+    for channel in config.configured_channels() {
+        if is_native_channel_supported(channel) {
+            info!("Channel '{}' is configured and has a native adapter", channel);
+        } else {
+            info!(
+                "Channel '{}' is configured but adapter is pending; config is preserved for rollout",
+                channel
+            );
+        }
+    }
+}
+
+fn spawn_channel_adapters(bus: Arc<MessageBus>, config: &AppConfig) {
+    let adapter_max_inflight = runtime_adapter_max_inflight(config);
+    let adapter_retry_jitter_ms = runtime_adapter_retry_jitter_ms(config);
+
+    if let Some(whatsapp_cfg) = &config.whatsapp {
+        let whatsapp = WhatsAppAdapter::new(
+            bus.clone(),
+            whatsapp_cfg.token.clone(),
+            whatsapp_cfg.api_base.clone(),
+            whatsapp_cfg.phone_number_id.clone(),
+            whatsapp_cfg.default_to.clone(),
+            adapter_max_inflight,
+            adapter_retry_jitter_ms,
+        );
+        tokio::spawn(async move {
+            if let Err(e) = whatsapp.start().await {
+                error!("WhatsApp adapter error: {}", e);
+            }
+        });
+    }
+
+    if let Some(telegram_cfg) = &config.telegram {
+        let telegram_bot = TelegramBot::new(bus.clone(), telegram_cfg.token.clone());
+        tokio::spawn(async move {
+            if let Err(e) = telegram_bot.start().await {
+                error!("Telegram Bot error: {}", e);
+            }
+        });
+    }
+
+    if let Some(discord_cfg) = &config.discord {
+        let discord_bot = DiscordBot::new(bus.clone(), discord_cfg.token.clone());
+        tokio::spawn(async move {
+            if let Err(e) = discord_bot.start().await {
+                error!("Discord Bot error: {}", e);
+            }
+        });
+    }
+
+    if let Some(slack_cfg) = &config.slack {
+        let slack = SlackAdapter::new(
+            bus.clone(),
+            slack_cfg.bot_token.clone(),
+            slack_cfg.default_channel.clone(),
+            adapter_max_inflight,
+            adapter_retry_jitter_ms,
+        );
+        tokio::spawn(async move {
+            if let Err(e) = slack.start().await {
+                error!("Slack adapter error: {}", e);
+            }
+        });
+    }
+
+    if config.signal.is_some() {
+        info!("{} is configured (adapter rollout pending)", CHANNEL_SIGNAL);
+    }
+    if config.imessage.as_ref().is_some_and(|cfg| cfg.enabled) {
+        info!("{} is configured (adapter rollout pending)", CHANNEL_IMESSAGE);
+    }
+    if let Some(teams_cfg) = &config.teams {
+        if let Some(webhook_url) = teams_cfg.webhook_url.clone() {
+            let teams = TeamsAdapter::new(
+                bus.clone(),
+                webhook_url,
+                adapter_max_inflight,
+                adapter_retry_jitter_ms,
+            );
+            tokio::spawn(async move {
+                if let Err(e) = teams.start().await {
+                    error!("Teams adapter error: {}", e);
+                }
+            });
+        } else {
+            info!("{} is configured but missing webhook_url", CHANNEL_TEAMS);
+        }
+    }
+    if config.matrix.is_some() {
+        info!("{} is configured (adapter rollout pending)", CHANNEL_MATRIX);
+    }
+    if let Some(zalo_cfg) = &config.zalo {
+        if let Some(webhook_url) = zalo_cfg.webhook_url.clone() {
+            let zalo = ZaloAdapter::new(
+                bus.clone(),
+                zalo_cfg.token.clone(),
+                webhook_url,
+                zalo_cfg.default_to.clone(),
+                adapter_max_inflight,
+                adapter_retry_jitter_ms,
+            );
+            tokio::spawn(async move {
+                if let Err(e) = zalo.start().await {
+                    error!("Zalo adapter error: {}", e);
+                }
+            });
+        } else {
+            info!("{} is configured but missing webhook_url", CHANNEL_ZALO);
+        }
+    }
+    if let Some(google_chat_cfg) = &config.google_chat {
+        let google_chat = GoogleChatAdapter::new(
+            bus.clone(),
+            google_chat_cfg.webhook_url.clone(),
+            adapter_max_inflight,
+            adapter_retry_jitter_ms,
+        );
+        tokio::spawn(async move {
+            if let Err(e) = google_chat.start().await {
+                error!("Google Chat adapter error: {}", e);
+            }
+        });
+    }
+    if config.webchat.as_ref().is_some_and(|cfg| cfg.enabled) {
+        info!(
+            "{} is configured (HTTP gateway path serves as base transport)",
+            CHANNEL_WEBCHAT
+        );
+    }
+    if config.google_chat.is_some() {
+        info!("{} is configured", CHANNEL_GOOGLE_CHAT);
+    }
+}
+
+fn runtime_adapter_max_inflight(config: &AppConfig) -> usize {
+    config
+        .runtime
+        .as_ref()
+        .and_then(|r| r.adapter_max_inflight)
+        .unwrap_or(1)
+        .clamp(1, 8)
+}
+
+fn runtime_adapter_retry_jitter_ms(config: &AppConfig) -> u64 {
+    config
+        .runtime
+        .as_ref()
+        .and_then(|r| r.adapter_retry_jitter_ms)
+        .unwrap_or(150)
+        .clamp(0, 2000)
+}
+
+fn runtime_gateway_config(config: &AppConfig) -> GatewayRuntimeConfig {
+    GatewayRuntimeConfig {
+        ws_heartbeat_secs: config
+            .runtime
+            .as_ref()
+            .and_then(|r| r.ws_heartbeat_secs)
+            .unwrap_or(15)
+            .clamp(3, 120),
+        health_window_minutes: config
+            .runtime
+            .as_ref()
+            .and_then(|r| r.health_window_minutes)
+            .map(|v| v as usize)
+            .unwrap_or(60)
+            .clamp(5, 60),
+        dedupe_max_entries: config
+            .runtime
+            .as_ref()
+            .and_then(|r| r.dedupe_max_entries)
+            .unwrap_or(2048)
+            .clamp(128, 20_000),
+    }
 }
 
 
@@ -113,8 +302,30 @@ pub async fn start_server(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     let db_path = workspace.join("pocketclaw.db");
     let store_url = format!("sqlite://{}?mode=rwc", db_path.display());
     let store = pocketclaw_persistence::SqliteSessionStore::new(&store_url).await?;
-
+    let session_store = store.clone();
     let sessions = SessionManager::new(store, sheets_client);
+    tools
+        .register(Arc::new(SessionsListTool::new(session_store.clone())))
+        .await;
+    tools
+        .register(Arc::new(SessionsHistoryTool::new(session_store.clone())))
+        .await;
+    tools
+        .register(Arc::new(SessionsSendTool::new(bus.clone())))
+        .await;
+    tools
+        .register(Arc::new(ChannelHealthTool::new(
+            "http://127.0.0.1:8080".to_string(),
+            config_val.web.as_ref().and_then(|w| w.auth_token.clone()),
+        )))
+        .await;
+    tools
+        .register(Arc::new(MetricsSnapshotTool::new(
+            "http://127.0.0.1:8080".to_string(),
+            config_val.web.as_ref().and_then(|w| w.auth_token.clone()),
+        )))
+        .await;
+    tools.register(Arc::new(DatetimeNowTool::new())).await;
 
     let agent = AgentLoop::new(
         bus.clone(),
@@ -146,13 +357,33 @@ pub async fn start_server(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         8080, 
         config_val.web.as_ref().and_then(|w| w.auth_token.clone()),
         metrics.clone(),
-        reload_tx
+        reload_tx,
+        session_store.clone(),
+        config_val
+            .whatsapp
+            .as_ref()
+            .and_then(|w| w.verify_token.clone()),
+        config_val
+            .whatsapp
+            .as_ref()
+            .and_then(|w| w.app_secret.clone()),
+        config_val
+            .slack
+            .as_ref()
+            .and_then(|s| s.signing_secret.clone()),
+        config_val
+            .configured_channels()
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        runtime_gateway_config(&config_val),
     );
     tokio::spawn(async move {
         if let Err(e) = gateway.start().await {
             error!("Gateway error: {}", e);
         }
     });
+    log_channel_readiness(&config_val);
 
     // Start Heartbeat Service
     let heartbeat = HeartbeatService::new(workspace.clone(), 30 * 60, true);
@@ -179,25 +410,7 @@ pub async fn start_server(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         info!("Groq voice transcription enabled");
     }
 
-    // Start Telegram Bot if configured
-    if let Some(telegram_cfg) = &config_val.telegram {
-        let telegram_bot = TelegramBot::new(bus.clone(), telegram_cfg.token.clone());
-        tokio::spawn(async move {
-            if let Err(e) = telegram_bot.start().await {
-                error!("Telegram Bot error: {}", e);
-            }
-        });
-    }
-
-    // Start Discord Bot if configured
-    if let Some(discord_cfg) = &config_val.discord {
-        let discord_bot = DiscordBot::new(bus.clone(), discord_cfg.token.clone());
-        tokio::spawn(async move {
-            if let Err(e) = discord_bot.start().await {
-                error!("Discord Bot error: {}", e);
-            }
-        });
-    }
+    spawn_channel_adapters(bus.clone(), &config_val);
 
     println!("🦞 Gateway started on 0.0.0.0:8080");
     println!("✓ Heartbeat service started");

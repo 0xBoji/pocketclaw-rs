@@ -4,6 +4,8 @@ pub mod registry;
 pub mod exec_tool;
 pub mod fs_tools;
 pub mod sandbox;
+pub mod sessions_tools;
+pub mod platform_tools;
 use async_trait::async_trait;
 use serde_json::Value;
 use thiserror::Error;

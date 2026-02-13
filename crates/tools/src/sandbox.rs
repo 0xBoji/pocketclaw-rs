@@ -176,3 +176,90 @@ pub fn truncate_output(output: &str, max_bytes: usize) -> String {
         format!("{}\n\n--- OUTPUT TRUNCATED ({}B limit) ---", truncated, max_bytes)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn mk_temp_workspace(tag: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("pocketclaw-tools-{tag}-{nonce}"));
+        fs::create_dir_all(&path).expect("failed to create workspace");
+        path
+    }
+
+    #[test]
+    fn validate_existing_path_inside_workspace() {
+        let workspace = mk_temp_workspace("existing-inside");
+        let file_path = workspace.join("notes.txt");
+        fs::write(&file_path, "ok").expect("failed to create file");
+
+        let resolved = validate_path(&workspace, "notes.txt").expect("path should validate");
+        assert!(resolved.starts_with(&workspace.canonicalize().expect("canonical workspace")));
+
+        let _ = fs::remove_dir_all(workspace);
+    }
+
+    #[test]
+    fn validate_non_existing_nested_path_inside_workspace() {
+        let workspace = mk_temp_workspace("non-existing");
+        let resolved = validate_path(&workspace, "a/b/c.txt").expect("path should validate");
+        assert!(resolved.starts_with(&workspace.canonicalize().expect("canonical workspace")));
+        assert!(resolved.ends_with("a/b/c.txt"));
+
+        let _ = fs::remove_dir_all(workspace);
+    }
+
+    #[test]
+    fn validate_rejects_absolute_path_outside_workspace() {
+        let workspace = mk_temp_workspace("outside");
+        let outside = std::env::temp_dir().join("outside-pocketclaw.txt");
+        fs::write(&outside, "outside").expect("failed to create outside file");
+
+        let err = validate_path(&workspace, outside.to_string_lossy().as_ref())
+            .expect_err("outside path should be rejected");
+        assert!(err.to_string().contains("Access denied"));
+
+        let _ = fs::remove_file(outside);
+        let _ = fs::remove_dir_all(workspace);
+    }
+
+    #[test]
+    fn private_ip_detection_covers_ipv4_ranges() {
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(10, 1, 2, 3))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(192, 168, 1, 5))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(169, 254, 169, 254))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(100, 64, 0, 1))));
+        assert!(!is_private_ip(&IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8))));
+    }
+
+    #[test]
+    fn private_ip_detection_covers_ipv6_ranges() {
+        assert!(is_private_ip(&IpAddr::V6(Ipv6Addr::LOCALHOST)));
+        assert!(is_private_ip(&IpAddr::V6(Ipv6Addr::UNSPECIFIED)));
+        assert!(is_private_ip(&IpAddr::V6("fc00::1".parse().expect("ipv6"))));
+        assert!(is_private_ip(&IpAddr::V6("fe80::1".parse().expect("ipv6"))));
+        assert!(!is_private_ip(&IpAddr::V6("2606:4700:4700::1111".parse().expect("ipv6"))));
+    }
+
+    #[test]
+    fn truncate_output_keeps_short_strings() {
+        let text = "hello";
+        assert_eq!(truncate_output(text, 10), "hello");
+    }
+
+    #[test]
+    fn truncate_output_adds_marker_when_limited() {
+        let text = "abcdefghijklmnopqrstuvwxyz";
+        let result = truncate_output(text, 5);
+        assert!(result.starts_with("abcde"));
+        assert!(result.contains("OUTPUT TRUNCATED (5B limit)"));
+    }
+}

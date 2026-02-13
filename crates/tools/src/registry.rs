@@ -95,3 +95,87 @@ impl ToolRegistry {
         self.metrics.read().await.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use serde_json::json;
+
+    struct DummyTool {
+        name: &'static str,
+    }
+
+    #[async_trait]
+    impl Tool for DummyTool {
+        fn name(&self) -> &str {
+            self.name
+        }
+
+        fn description(&self) -> &str {
+            "dummy"
+        }
+
+        fn parameters(&self) -> serde_json::Value {
+            json!({
+                "type": "object",
+                "properties": {}
+            })
+        }
+
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::ToolError> {
+            Ok("ok".to_string())
+        }
+    }
+
+    #[test]
+    fn empty_allowed_list_denies_all_tools() {
+        assert!(!ToolRegistry::is_tool_allowed("read_file", &[]));
+    }
+
+    #[tokio::test]
+    async fn register_and_get_tool() {
+        let registry = ToolRegistry::new();
+        registry.register(Arc::new(DummyTool { name: "dummy" })).await;
+
+        let tool = registry.get("dummy").await;
+        assert!(tool.is_some());
+        assert_eq!(tool.expect("tool").name(), "dummy");
+    }
+
+    #[tokio::test]
+    async fn list_definitions_respects_permission_filter() {
+        let registry = ToolRegistry::new();
+        registry.register(Arc::new(DummyTool { name: "a" })).await;
+        registry.register(Arc::new(DummyTool { name: "b" })).await;
+
+        let allowed = vec!["b".to_string()];
+        let defs = registry.list_definitions_for_permissions(&allowed).await;
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0]["name"], "b");
+    }
+
+    #[tokio::test]
+    async fn list_definitions_returns_all_when_unfiltered() {
+        let registry = ToolRegistry::new();
+        registry.register(Arc::new(DummyTool { name: "a" })).await;
+        registry.register(Arc::new(DummyTool { name: "b" })).await;
+
+        let defs = registry.list_definitions().await;
+        assert_eq!(defs.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn metrics_are_recorded() {
+        let registry = ToolRegistry::new();
+        registry.record_metrics("dummy", 40, true).await;
+        registry.record_metrics("dummy", 20, false).await;
+
+        let metrics = registry.get_metrics().await;
+        let m = metrics.get("dummy").expect("dummy metrics");
+        assert_eq!(m.execution_count, 2);
+        assert_eq!(m.success_count, 1);
+        assert_eq!(m.failure_count, 1);
+        assert_eq!(m.total_duration_ms, 60);
+    }
+}

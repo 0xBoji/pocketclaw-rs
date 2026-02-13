@@ -7,12 +7,14 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import okhttp3.WebSocket
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 class ResourceMonitorActivity : AppCompatActivity() {
     private var logThread: Thread? = null
     private var isLogging = false
+    private var eventSocket: WebSocket? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +24,7 @@ class ResourceMonitorActivity : AppCompatActivity() {
 
         val (scroll, root) = UiFactory.screen(this)
         root.addView(UiFactory.title(this, "Screen 6: Resource & Log Monitor"))
-        root.addView(UiFactory.subtitle(this, "Doc metrics tu /api/monitor/metrics va logcat."))
+        root.addView(UiFactory.subtitle(this, "Doc metrics, gateway events (ws), va logcat."))
 
         val metricsText = UiFactory.input(this, "metrics", multiline = true).apply {
             isFocusable = false
@@ -45,6 +47,70 @@ class ResourceMonitorActivity : AppCompatActivity() {
             }.start()
         }
         root.addView(refreshBtn)
+
+        val channelHealthText = UiFactory.input(this, "channel health", multiline = true).apply {
+            isFocusable = false
+            setText("No channel health yet")
+        }
+        root.addView(channelHealthText)
+
+        val channelHealthBtn = UiFactory.secondaryButton(this, "Refresh Channel Health")
+        channelHealthBtn.setOnClickListener {
+            Thread {
+                val client = GatewayClient(cfg.gatewayAuthToken.ifBlank { null })
+                val result = client.channelsHealth()
+                runOnUiThread {
+                    if (result.isSuccess) {
+                        channelHealthText.setText(result.getOrThrow().toString(2))
+                    } else {
+                        Toast.makeText(this, "Channel health fail: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }.start()
+        }
+        root.addView(channelHealthBtn)
+
+        val eventsHeader = UiFactory.label(this, "Gateway Events (WebSocket)")
+        root.addView(eventsHeader)
+
+        val eventsScroll = ScrollView(this)
+        val eventsView = TextView(this).apply {
+            textSize = 11f
+            setTextColor(0xFF93C5FD.toInt())
+            typeface = android.graphics.Typeface.MONOSPACE
+            text = "Event stream stopped\n"
+        }
+        eventsScroll.addView(eventsView)
+        root.addView(eventsScroll)
+
+        val startEventsBtn = UiFactory.secondaryButton(this, "Start Event Stream")
+        startEventsBtn.setOnClickListener {
+            if (eventSocket != null) return@setOnClickListener
+            val client = GatewayClient(cfg.gatewayAuthToken.ifBlank { null })
+            eventSocket = client.streamEvents(
+                onEvent = { event ->
+                    runOnUiThread {
+                        appendLine(eventsView, eventsScroll, event.toString())
+                    }
+                },
+                onError = { error ->
+                    runOnUiThread {
+                        appendLine(eventsView, eventsScroll, "error: $error")
+                        Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+            appendLine(eventsView, eventsScroll, "connecting ws://127.0.0.1:8080/ws/events")
+        }
+        root.addView(startEventsBtn)
+
+        val stopEventsBtn = UiFactory.secondaryButton(this, "Stop Event Stream")
+        stopEventsBtn.setOnClickListener {
+            eventSocket?.close(1000, "user stop")
+            eventSocket = null
+            appendLine(eventsView, eventsScroll, "event stream stopped")
+        }
+        root.addView(stopEventsBtn)
 
         val logHeader = UiFactory.label(this, "Live Logs")
         root.addView(logHeader)
@@ -111,5 +177,22 @@ class ResourceMonitorActivity : AppCompatActivity() {
         super.onDestroy()
         isLogging = false
         logThread?.interrupt()
+        eventSocket?.close(1000, "activity destroy")
+        eventSocket = null
+    }
+
+    private fun appendLine(textView: TextView, scrollView: ScrollView, line: String) {
+        val maxChars = 24_000
+        val newText = buildString {
+            append(textView.text)
+            append(line)
+            append('\n')
+        }
+        textView.text = if (newText.length > maxChars) {
+            newText.takeLast(maxChars)
+        } else {
+            newText
+        }
+        scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 }

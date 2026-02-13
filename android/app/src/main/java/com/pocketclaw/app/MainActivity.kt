@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
         val next = if (store.hasConfig()) {
             Intent(this, ControllerDashboardActivity::class.java)
         } else {
-            Intent(this, SetupActivity::class.java)
+            Intent(this, SetupWizardActivity::class.java)
         }
 
         startActivity(next)

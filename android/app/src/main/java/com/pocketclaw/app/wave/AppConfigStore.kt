@@ -14,6 +14,13 @@ data class AppConfigData(
     var groqKey: String = "",
     var telegramToken: String = "",
     var discordToken: String = "",
+    var whatsappToken: String = "",
+    var whatsappPhoneNumberId: String = "",
+    var whatsappDefaultTo: String = "",
+    var whatsappVerifyToken: String = "",
+    var whatsappAppSecret: String = "",
+    var slackBotToken: String = "",
+    var slackDefaultChannel: String = "",
     var braveKey: String = "",
     var sheetId: String = "",
     var serviceAccountJson: String = "",
@@ -21,7 +28,13 @@ data class AppConfigData(
     var sandboxExecEnabled: Boolean = true,
     var sandboxTimeoutSecs: Int = 30,
     var sandboxMaxOutputBytes: Int = 65536,
-    var sandboxNetworkAllowlist: String = ""
+    var sandboxNetworkAllowlist: String = "",
+    var liteMode: Boolean = true,
+    var wsHeartbeatSecs: Int = 30,
+    var healthWindowMinutes: Int = 30,
+    var dedupeMaxEntries: Int = 1024,
+    var adapterMaxInflight: Int = 1,
+    var adapterRetryJitterMs: Int = 250
 )
 
 class AppConfigStore(private val context: Context) {
@@ -83,6 +96,21 @@ class AppConfigStore(private val context: Context) {
             val discord = json.optJSONObject("discord")
             if (discord != null) data.discordToken = discord.optString("token", "")
 
+            val whatsapp = json.optJSONObject("whatsapp")
+            if (whatsapp != null) {
+                data.whatsappToken = whatsapp.optString("token", "")
+                data.whatsappPhoneNumberId = whatsapp.optString("phone_number_id", "")
+                data.whatsappDefaultTo = whatsapp.optString("default_to", "")
+                data.whatsappVerifyToken = whatsapp.optString("verify_token", "")
+                data.whatsappAppSecret = whatsapp.optString("app_secret", "")
+            }
+
+            val slack = json.optJSONObject("slack")
+            if (slack != null) {
+                data.slackBotToken = slack.optString("bot_token", "")
+                data.slackDefaultChannel = slack.optString("default_channel", "")
+            }
+
             val web = json.optJSONObject("web")
             if (web != null) {
                 data.braveKey = web.optString("brave_key", "")
@@ -109,6 +137,21 @@ class AppConfigStore(private val context: Context) {
                     data.sandboxNetworkAllowlist = domains.joinToString(",")
                 }
             }
+
+            val runtime = json.optJSONObject("runtime")
+            if (runtime != null) {
+                data.wsHeartbeatSecs = runtime.optInt("ws_heartbeat_secs", data.wsHeartbeatSecs)
+                data.healthWindowMinutes = runtime.optInt("health_window_minutes", data.healthWindowMinutes)
+                data.dedupeMaxEntries = runtime.optInt("dedupe_max_entries", data.dedupeMaxEntries)
+                data.adapterMaxInflight = runtime.optInt("adapter_max_inflight", data.adapterMaxInflight)
+                data.adapterRetryJitterMs = runtime.optInt("adapter_retry_jitter_ms", data.adapterRetryJitterMs)
+            }
+
+            val isLiteProfile = data.wsHeartbeatSecs >= 25 &&
+                data.healthWindowMinutes <= 35 &&
+                data.dedupeMaxEntries <= 1200 &&
+                data.adapterMaxInflight <= 1
+            data.liteMode = isLiteProfile
 
             data
         } catch (_: Exception) {
@@ -160,6 +203,31 @@ class AppConfigStore(private val context: Context) {
             if (data.discordToken.isNotBlank()) {
                 put("discord", JSONObject().put("token", data.discordToken))
             }
+            if (data.slackBotToken.isNotBlank()) {
+                put("slack", JSONObject().apply {
+                    put("bot_token", data.slackBotToken)
+                    if (data.slackDefaultChannel.isNotBlank()) {
+                        put("default_channel", data.slackDefaultChannel)
+                    }
+                })
+            }
+            if (data.whatsappToken.isNotBlank()) {
+                put("whatsapp", JSONObject().apply {
+                    put("token", data.whatsappToken)
+                    if (data.whatsappPhoneNumberId.isNotBlank()) {
+                        put("phone_number_id", data.whatsappPhoneNumberId)
+                    }
+                    if (data.whatsappDefaultTo.isNotBlank()) {
+                        put("default_to", data.whatsappDefaultTo)
+                    }
+                    if (data.whatsappVerifyToken.isNotBlank()) {
+                        put("verify_token", data.whatsappVerifyToken)
+                    }
+                    if (data.whatsappAppSecret.isNotBlank()) {
+                        put("app_secret", data.whatsappAppSecret)
+                    }
+                })
+            }
             if (webObj.length() > 0) put("web", webObj)
             if (data.sheetId.isNotBlank() && data.serviceAccountJson.isNotBlank()) {
                 put("google_sheets", JSONObject().apply {
@@ -174,6 +242,13 @@ class AppConfigStore(private val context: Context) {
                 put("exec_timeout_secs", data.sandboxTimeoutSecs)
                 put("max_output_bytes", data.sandboxMaxOutputBytes)
                 put("network_allowlist", sandboxAllowlist)
+            })
+            put("runtime", JSONObject().apply {
+                put("ws_heartbeat_secs", data.wsHeartbeatSecs.coerceIn(3, 120))
+                put("health_window_minutes", data.healthWindowMinutes.coerceIn(5, 60))
+                put("dedupe_max_entries", data.dedupeMaxEntries.coerceIn(128, 20000))
+                put("adapter_max_inflight", data.adapterMaxInflight.coerceIn(1, 8))
+                put("adapter_retry_jitter_ms", data.adapterRetryJitterMs.coerceIn(0, 2000))
             })
         }
 
