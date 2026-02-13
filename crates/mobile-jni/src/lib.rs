@@ -100,6 +100,13 @@ pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
         .expect("Couldn't get java string!")
         .into();
     let config_path = PathBuf::from(config_path_str);
+    if let Some(config_dir) = config_path.parent() {
+        let approved_path = config_dir.join("approved_skills.json");
+        std::env::set_var(
+            "POCKETCLAW_APPROVED_SKILLS_PATH",
+            approved_path.to_string_lossy().to_string(),
+        );
+    }
 
     // Capture JavaVM and Class Reference
     let vm = env.get_java_vm().expect("Failed to get JavaVM");

@@ -19,6 +19,8 @@ pub struct ToolRegistry {
 }
 
 impl ToolRegistry {
+    const ALLOW_ALL_MARKER: &'static str = "*";
+
     pub fn new() -> Self {
         Self {
             tools: Arc::new(RwLock::new(HashMap::new())),
@@ -59,6 +61,19 @@ impl ToolRegistry {
         }
 
         let tools = self.tools.read().await;
+        if allowed_tools.iter().any(|a| a == Self::ALLOW_ALL_MARKER) {
+            return tools
+                .values()
+                .map(|t| {
+                    serde_json::json!({
+                        "name": t.name(),
+                        "description": t.description(),
+                        "parameters": t.parameters()
+                    })
+                })
+                .collect();
+        }
+
         tools.values()
             .filter(|t| allowed_tools.iter().any(|a| a == t.name()))
             .map(|t| {
@@ -74,7 +89,9 @@ impl ToolRegistry {
     /// Check if a tool name is in the allowed list.
     /// If `allowed_tools` is empty, NO tools are allowed.
     pub fn is_tool_allowed(tool_name: &str, allowed_tools: &[String]) -> bool {
-        allowed_tools.iter().any(|a| a == tool_name)
+        allowed_tools
+            .iter()
+            .any(|a| a == tool_name || a == Self::ALLOW_ALL_MARKER)
     }
 
     /// Record metrics for a tool execution.
@@ -133,6 +150,12 @@ mod tests {
         assert!(!ToolRegistry::is_tool_allowed("read_file", &[]));
     }
 
+    #[test]
+    fn wildcard_allows_any_tool() {
+        assert!(ToolRegistry::is_tool_allowed("read_file", &["*".to_string()]));
+        assert!(ToolRegistry::is_tool_allowed("android_action", &["*".to_string()]));
+    }
+
     #[tokio::test]
     async fn register_and_get_tool() {
         let registry = ToolRegistry::new();
@@ -162,6 +185,17 @@ mod tests {
         registry.register(Arc::new(DummyTool { name: "b" })).await;
 
         let defs = registry.list_definitions().await;
+        assert_eq!(defs.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn wildcard_permission_returns_all_registered_definitions() {
+        let registry = ToolRegistry::new();
+        registry.register(Arc::new(DummyTool { name: "a" })).await;
+        registry.register(Arc::new(DummyTool { name: "b" })).await;
+
+        let allowed = vec!["*".to_string()];
+        let defs = registry.list_definitions_for_permissions(&allowed).await;
         assert_eq!(defs.len(), 2);
     }
 

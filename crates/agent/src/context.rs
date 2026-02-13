@@ -15,6 +15,8 @@ pub struct ContextBuilder {
 }
 
 impl ContextBuilder {
+    const ALLOW_ALL_MARKER: &'static str = "*";
+
     pub fn new(workspace: PathBuf) -> Self {
         let approved_skills = ApprovedSkills::load(&ApprovedSkills::default_path());
         Self {
@@ -25,28 +27,27 @@ impl ContextBuilder {
     }
 
     /// Get the set of tools allowed by currently approved skills.
-    /// If no skills are approved, returns empty set (unless core tools are implicitly allowed?).
-    /// Note: Core tools should probably be allowed by default or managed by a "core" skill.
-    /// For now, we'll assume core tools are NOT subject to skill permissions unless specified.
-    /// Wait, the user requirement "Default Deny" implies strictness.
-    /// But `registry.is_tool_allowed` returns true if allowed_tools is empty.
-    /// To enforce deny, we must pass a non-empty list if we want to restrict.
+    /// Strict default-deny remains: no approved skills => no tools.
     ///
-    /// Strategy:
-    /// - If no skills are approved, we might want to allow ONLY core tools (exec, fs, etc)?
-    /// - Or allow NOTHING?
-    ///
-    /// Let's return a list of tool names.
+    /// Compatibility rules for approved legacy skills:
+    /// - No permissions block => allow all registered tools.
+    /// - Empty permissions.tools => allow all registered tools.
     pub fn get_allowed_tools(&self) -> Vec<String> {
         let mut allowed = HashSet::new();
         let skills = self.skills_loader.list_skills();
 
         for skill in skills {
             if self.approved_skills.is_approved(&skill.name) {
-                if let Some(perms) = &skill.permissions {
-                    for tool in &perms.tools {
-                        allowed.insert(tool.clone());
+                match &skill.permissions {
+                    Some(perms) => {
+                        if perms.tools.is_empty() {
+                            return vec![Self::ALLOW_ALL_MARKER.to_string()];
+                        }
+                        for tool in &perms.tools {
+                            allowed.insert(tool.clone());
+                        }
                     }
+                    None => return vec![Self::ALLOW_ALL_MARKER.to_string()],
                 }
             }
         }

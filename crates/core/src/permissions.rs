@@ -60,6 +60,11 @@ impl ApprovedSkills {
 
     /// Get the default path for the approved skills file.
     pub fn default_path() -> PathBuf {
+        if let Ok(explicit_path) = std::env::var("POCKETCLAW_APPROVED_SKILLS_PATH") {
+            if !explicit_path.trim().is_empty() {
+                return PathBuf::from(explicit_path);
+            }
+        }
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
         PathBuf::from(home).join(".pocketclaw/approved_skills.json")
     }
