@@ -159,7 +159,7 @@ class PocketClawAccessibilityService : AccessibilityService() {
                         }
                         // Copy to software bitmap to access pixels/compress
                         bitmap = hardwareBitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
-                        hardwareBitmap?.close()
+                        hardwareBitmap?.recycle()
                         screenshot.hardwareBuffer.close()
                     } catch (e: Exception) {
                         Log.e("PocketClaw", "Screenshot processing failed", e)
