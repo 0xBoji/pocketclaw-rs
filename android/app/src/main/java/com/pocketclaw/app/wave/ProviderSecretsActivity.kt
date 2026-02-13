@@ -7,6 +7,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class ProviderSecretsActivity : AppCompatActivity() {
+    private val assistantAddressOptions = arrayOf("minh", "toi", "tro ly")
+    private val userAddressOptions = arrayOf("ban", "anh/chi", "quy khach")
+    private val toneOptions = arrayOf("than thien, ngan gon", "chuyen nghiep", "tu nhien")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -41,6 +45,40 @@ class ProviderSecretsActivity : AppCompatActivity() {
         val promptInput = UiFactory.input(this, "You are a helpful AI assistant.", multiline = true)
         promptInput.setText(config.systemPrompt)
         root.addView(promptInput)
+
+        root.addView(UiFactory.section(this, "Addressing"))
+        root.addView(UiFactory.label(this, "Assistant refers to self as"))
+        val assistantSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@ProviderSecretsActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                assistantAddressOptions
+            )
+            setSelection(assistantAddressOptions.indexOf(config.assistantSelfAddress).coerceAtLeast(0))
+        }
+        root.addView(assistantSpinner)
+
+        root.addView(UiFactory.label(this, "Assistant addresses user as"))
+        val userSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@ProviderSecretsActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                userAddressOptions
+            )
+            setSelection(userAddressOptions.indexOf(config.userAddress).coerceAtLeast(0))
+        }
+        root.addView(userSpinner)
+
+        root.addView(UiFactory.label(this, "Tone"))
+        val toneSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@ProviderSecretsActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                toneOptions
+            )
+            setSelection(toneOptions.indexOf(config.addressingTone).coerceAtLeast(0))
+        }
+        root.addView(toneSpinner)
 
         root.addView(UiFactory.section(this, "Extra Secrets"))
         root.addView(UiFactory.label(this, "Groq API Key (voice optional)"))
@@ -82,6 +120,9 @@ class ProviderSecretsActivity : AppCompatActivity() {
             config.apiKey = key
             config.model = model
             config.systemPrompt = promptInput.text.toString().trim().ifBlank { "You are a helpful AI assistant." }
+            config.assistantSelfAddress = assistantSpinner.selectedItem.toString()
+            config.userAddress = userSpinner.selectedItem.toString()
+            config.addressingTone = toneSpinner.selectedItem.toString()
             config.groqKey = groqInput.text.toString().trim()
             config.braveKey = braveInput.text.toString().trim()
             config.gatewayAuthToken = authTokenInput.text.toString().trim()

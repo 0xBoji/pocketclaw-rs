@@ -34,10 +34,18 @@ data class AppConfigData(
     var healthWindowMinutes: Int = 30,
     var dedupeMaxEntries: Int = 1024,
     var adapterMaxInflight: Int = 1,
-    var adapterRetryJitterMs: Int = 250
+    var adapterRetryJitterMs: Int = 250,
+    var assistantSelfAddress: String = "minh",
+    var userAddress: String = "ban",
+    var addressingTone: String = "than thien, ngan gon"
 )
 
 class AppConfigStore(private val context: Context) {
+    companion object {
+        private const val PERSONA_BLOCK_START = "<!-- pocketclaw:persona:start -->"
+        private const val PERSONA_BLOCK_END = "<!-- pocketclaw:persona:end -->"
+    }
+
     private val configDir: File = File(context.filesDir, ".pocketclaw")
     private val configFile: File = File(configDir, "config.json")
 
@@ -147,6 +155,20 @@ class AppConfigStore(private val context: Context) {
                 data.adapterRetryJitterMs = runtime.optInt("adapter_retry_jitter_ms", data.adapterRetryJitterMs)
             }
 
+            val persona = json.optJSONObject("persona")
+            val addressing = persona?.optJSONObject("addressing")
+            if (addressing != null) {
+                data.assistantSelfAddress = addressing.optString("assistant_self", data.assistantSelfAddress)
+                    .trim()
+                    .ifBlank { data.assistantSelfAddress }
+                data.userAddress = addressing.optString("user", data.userAddress)
+                    .trim()
+                    .ifBlank { data.userAddress }
+                data.addressingTone = addressing.optString("tone", data.addressingTone)
+                    .trim()
+                    .ifBlank { data.addressingTone }
+            }
+
             val isLiteProfile = data.wsHeartbeatSecs >= 25 &&
                 data.healthWindowMinutes <= 35 &&
                 data.dedupeMaxEntries <= 1200 &&
@@ -250,14 +272,67 @@ class AppConfigStore(private val context: Context) {
                 put("adapter_max_inflight", data.adapterMaxInflight.coerceIn(1, 8))
                 put("adapter_retry_jitter_ms", data.adapterRetryJitterMs.coerceIn(0, 2000))
             })
+            put("persona", JSONObject().put("addressing", JSONObject().apply {
+                put("assistant_self", data.assistantSelfAddress.trim().ifBlank { "minh" })
+                put("user", data.userAddress.trim().ifBlank { "ban" })
+                put("tone", data.addressingTone.trim().ifBlank { "than thien, ngan gon" })
+            }))
         }
 
         configFile.writeText(root.toString(2))
+        syncUserProfile(data)
     }
 
     fun approvedSkillsFile(): File {
         val dir = File(context.filesDir, ".pocketclaw")
         if (!dir.exists()) dir.mkdirs()
         return File(dir, "approved_skills.json")
+    }
+
+    private fun syncUserProfile(data: AppConfigData) {
+        val workspacePath = data.workspace.ifBlank { File(context.filesDir, "workspace").absolutePath }
+        val workspaceDir = File(workspacePath)
+        if (!workspaceDir.exists()) workspaceDir.mkdirs()
+
+        val userFile = File(workspaceDir, "USER.md")
+        val block = buildPersonaBlock(data).trim()
+        val existing = if (userFile.exists()) userFile.readText() else ""
+
+        val replaced = replacePersonaBlock(existing, block)
+        userFile.writeText(replaced.trimEnd() + "\n")
+    }
+
+    private fun replacePersonaBlock(existing: String, block: String): String {
+        val start = existing.indexOf(PERSONA_BLOCK_START)
+        val end = existing.indexOf(PERSONA_BLOCK_END)
+        val wrapped = "$PERSONA_BLOCK_START\n$block\n$PERSONA_BLOCK_END"
+
+        if (start >= 0 && end > start) {
+            val prefix = existing.substring(0, start).trimEnd()
+            val suffix = existing.substring(end + PERSONA_BLOCK_END.length).trimStart()
+            return when {
+                prefix.isBlank() && suffix.isBlank() -> wrapped
+                prefix.isBlank() -> "$wrapped\n\n$suffix"
+                suffix.isBlank() -> "$prefix\n\n$wrapped"
+                else -> "$prefix\n\n$wrapped\n\n$suffix"
+            }
+        }
+
+        val base = existing.trimEnd()
+        return if (base.isBlank()) wrapped else "$base\n\n$wrapped"
+    }
+
+    private fun buildPersonaBlock(data: AppConfigData): String {
+        val assistant = data.assistantSelfAddress.trim().ifBlank { "minh" }
+        val user = data.userAddress.trim().ifBlank { "ban" }
+        val tone = data.addressingTone.trim().ifBlank { "than thien, ngan gon" }
+
+        return """
+## Preferred Addressing
+- Refer to yourself as "$assistant".
+- Address the user as "$user".
+- Maintain tone: "$tone".
+- Apply this from the first reply unless the user asks to change.
+        """.trimIndent()
     }
 }
