@@ -39,4 +39,9 @@ object RustBridge {
     fun performDumpHierarchy(): String {
         return PocketClawAccessibilityService.instance?.dumpHierarchy() ?: "<error>Service not connected</error>"
     }
+
+    @JvmStatic
+    fun performTakeScreenshot(): ByteArray {
+        return PocketClawAccessibilityService.instance?.takeScreenshotSync() ?: ByteArray(0)
+    }
 }

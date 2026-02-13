@@ -13,6 +13,69 @@ pub trait AndroidBridge: Send + Sync {
     async fn home(&self) -> Result<bool, String>;
     async fn input_text(&self, text: String) -> Result<bool, String>;
     async fn dump_hierarchy(&self) -> Result<String, String>;
+    async fn screenshot(&self) -> Result<Vec<u8>, String>;
+}
+
+// ... AndroidActionTool implementation remains same ...
+
+pub struct AndroidScreenTool {
+    bridge: Arc<dyn AndroidBridge>,
+}
+
+impl AndroidScreenTool {
+    pub fn new(bridge: Arc<dyn AndroidBridge>) -> Self {
+        Self { bridge }
+    }
+}
+
+#[async_trait]
+impl Tool for AndroidScreenTool {
+    fn name(&self) -> &str {
+        "android_screen"
+    }
+
+    fn description(&self) -> &str {
+        "Interact with the screen content: dump hierarchy (XML) or take a screenshot (PNG)."
+    }
+
+    fn parameters(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["dump_hierarchy", "screenshot"],
+                    "description": "Action to perform. Defaults to 'dump_hierarchy'.",
+                    "default": "dump_hierarchy"
+                }
+            }
+        })
+    }
+
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let action = args["action"].as_str().unwrap_or("dump_hierarchy");
+        
+        match action {
+            "dump_hierarchy" => {
+                self.bridge.dump_hierarchy().await.map_err(ToolError::ExecutionError)
+            }
+            "screenshot" => {
+                let bytes = self.bridge.screenshot().await.map_err(ToolError::ExecutionError)?;
+                if bytes.is_empty() {
+                    return Err(ToolError::ExecutionError("Screenshot returned empty bytes".into()));
+                }
+                // Return base64 for now, or we could save to file and return path
+                // For simplicity to agent, let's return a summary message + maybe base64 snippet?
+                // Or better: write to a file in the workspace and return the path relative to workspace.
+                // But this tool struct doesn't know about workspace path easily without refactoring.
+                // We'll return base64 string for direct usage in multi-modal models.
+                use base64::{Engine as _, engine::general_purpose};
+                let b64 = general_purpose::STANDARD.encode(&bytes);
+                Ok(format!("Screenshot taken. Size: {} bytes. Base64: {}", bytes.len(), b64))
+            }
+            _ => Err(ToolError::InvalidArgs(format!("Unknown action: {}", action))),
+        }
+    }
 }
 
 pub struct AndroidActionTool {
@@ -89,34 +152,3 @@ impl Tool for AndroidActionTool {
     }
 }
 
-pub struct AndroidScreenTool {
-    bridge: Arc<dyn AndroidBridge>,
-}
-
-impl AndroidScreenTool {
-    pub fn new(bridge: Arc<dyn AndroidBridge>) -> Self {
-        Self { bridge }
-    }
-}
-
-#[async_trait]
-impl Tool for AndroidScreenTool {
-    fn name(&self) -> &str {
-        "android_screen"
-    }
-
-    fn description(&self) -> &str {
-        "Dump the current Android screen hierarchy as XML."
-    }
-
-    fn parameters(&self) -> Value {
-        json!({
-            "type": "object",
-            "properties": {}
-        })
-    }
-
-    async fn execute(&self, _args: Value) -> Result<String, ToolError> {
-        self.bridge.dump_hierarchy().await.map_err(ToolError::ExecutionError)
-    }
-}

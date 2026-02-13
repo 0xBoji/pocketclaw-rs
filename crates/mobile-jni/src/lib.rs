@@ -66,6 +66,17 @@ impl AndroidBridge for AndroidBridgeImpl {
         let rust_str: String = env.get_string(&jstring).map_err(|e| e.to_string())?.into();
         Ok(rust_str)
     }
+
+    async fn screenshot(&self) -> Result<Vec<u8>, String> {
+        let mut env = self.vm.attach_current_thread_permanently().map_err(|e| e.to_string())?;
+        let result = env
+            .call_static_method(&self.bridge_class, "performTakeScreenshot", "()[B", &[])
+            .map_err(|e| e.to_string())?;
+        let jobj = result.l().map_err(|e| e.to_string())?;
+        let jbyte_array: jni::objects::JByteArray = jobj.into();
+        let bytes = env.convert_byte_array(jbyte_array).map_err(|e| e.to_string())?;
+        Ok(bytes)
+    }
 }
 
 #[no_mangle]

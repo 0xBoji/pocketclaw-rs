@@ -135,4 +135,58 @@ class PocketClawAccessibilityService : AccessibilityService() {
             .replace("'", "&apos;")
             .replace("\n", "&#10;")
     }
+
+    // --- Screenshot ---
+    
+    fun takeScreenshotSync(): ByteArray? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+            Log.e("PocketClaw", "Screenshot requires Android 11+")
+            return null
+        }
+
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var bitmap: android.graphics.Bitmap? = null
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+        takeScreenshot(
+            android.view.Display.DEFAULT_DISPLAY,
+            executor,
+            object : TakeScreenshotCallback {
+                override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                     try {
+                        val hardwareBitmap = screenshot.hardwareBuffer.let { buffer ->
+                            android.graphics.Bitmap.wrapHardwareBuffer(buffer, screenshot.colorSpace)
+                        }
+                        // Copy to software bitmap to access pixels/compress
+                        bitmap = hardwareBitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                        hardwareBitmap?.close()
+                        screenshot.hardwareBuffer.close()
+                    } catch (e: Exception) {
+                        Log.e("PocketClaw", "Screenshot processing failed", e)
+                    } finally {
+                        latch.countDown()
+                    }
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    Log.e("PocketClaw", "Screenshot failed with error code: $errorCode")
+                    latch.countDown()
+                }
+            }
+        )
+
+        try {
+            latch.await(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (e: InterruptedException) {
+            Log.e("PocketClaw", "Screenshot timeout")
+            return null
+        }
+        
+        return bitmap?.let { bmp ->
+            val stream = java.io.ByteArrayOutputStream()
+            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 80, stream)
+            bmp.recycle()
+            stream.toByteArray()
+        }
+    }
 }
