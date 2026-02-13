@@ -16,6 +16,16 @@ pub struct ContextBuilder {
 
 impl ContextBuilder {
     const ALLOW_ALL_MARKER: &'static str = "*";
+    const SAFE_DEFAULT_TOOLS: [&'static str; 8] = [
+        "read_file",
+        "list_dir",
+        "web_fetch",
+        "web_search",
+        "sessions_list",
+        "sessions_history",
+        "channel_health",
+        "datetime_now",
+    ];
 
     pub fn new(workspace: PathBuf) -> Self {
         let approved_skills = ApprovedSkills::load(&ApprovedSkills::default_path());
@@ -50,6 +60,12 @@ impl ContextBuilder {
                     None => return vec![Self::ALLOW_ALL_MARKER.to_string()],
                 }
             }
+        }
+        if allowed.is_empty() {
+            return Self::SAFE_DEFAULT_TOOLS
+                .iter()
+                .map(|t| t.to_string())
+                .collect();
         }
         allowed.into_iter().collect()
     }
