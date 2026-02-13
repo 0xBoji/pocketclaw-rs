@@ -57,7 +57,11 @@ enum Commands {
         message: Option<String>,
     },
     /// Start the gateway server (with Telegram/Discord bots)
-    Gateway,
+    Gateway {
+        /// Use mock Android bridge for testing on desktop
+        #[arg(long)]
+        mock_android: bool,
+    },
     /// Run the onboarding wizard
     Onboard,
     /// Show pocketclaw status
@@ -417,6 +421,15 @@ async fn main() -> anyhow::Result<()> {
     tools.register(Arc::new(ListDirTool::new(sandbox.clone()))).await;
     tools.register(Arc::new(WebFetchTool::new(sandbox.clone()))).await;
 
+    // Register Mock Android Tools if requested
+    if let Some(Commands::Gateway { mock_android: true }) = &cli.command {
+        info!("Using Mock Android Bridge");
+        let bridge = Arc::new(MockAndroidBridge);
+        tools.register(Arc::new(pocketclaw_tools::android_tools::AndroidActionTool::new(bridge.clone()))).await;
+        tools.register(Arc::new(pocketclaw_tools::android_tools::AndroidScreenTool::new(bridge.clone()))).await;
+        info!("Mock Android Tools registered");
+    }
+
     if let Some(web_cfg) = &config_val.web {
         if let Some(brave_key) = &web_cfg.brave_key {
             let tool: Arc<dyn pocketclaw_tools::Tool> = Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone()));
@@ -509,7 +522,8 @@ async fn main() -> anyhow::Result<()> {
     });
 
     match &cli.command {
-        Some(Commands::Gateway) => {
+        Some(Commands::Gateway { mock_android }) => {
+
             let gateway = Gateway::with_auth(
                 bus.clone(), 
                 8080, 
@@ -557,6 +571,9 @@ async fn main() -> anyhow::Result<()> {
             spawn_channel_adapters(bus.clone(), &config_val);
 
             println!("🦞 Gateway started on 0.0.0.0:8080");
+            if *mock_android {
+                println!("📱 Mock Android Mode: ENABLED");
+            }
             println!("✓ Heartbeat service started");
             println!("✓ Cron service initialized");
             println!("Press Ctrl+C to stop");
@@ -587,6 +604,50 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+use pocketclaw_tools::android_tools::AndroidBridge;
+use async_trait::async_trait;
+
+struct MockAndroidBridge;
+
+#[async_trait]
+impl AndroidBridge for MockAndroidBridge {
+    async fn click(&self, x: f32, y: f32) -> Result<bool, String> {
+        info!("MOCK: Click at ({}, {})", x, y);
+        Ok(true)
+    }
+    async fn scroll(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Result<bool, String> {
+        info!("MOCK: Scroll from ({}, {}) to ({}, {})", x1, y1, x2, y2);
+        Ok(true)
+    }
+    async fn back(&self) -> Result<bool, String> {
+        info!("MOCK: Back");
+        Ok(true)
+    }
+    async fn home(&self) -> Result<bool, String> {
+        info!("MOCK: Home");
+        Ok(true)
+    }
+    async fn input_text(&self, text: String) -> Result<bool, String> {
+        info!("MOCK: Input text '{}'", text);
+        Ok(true)
+    }
+    async fn dump_hierarchy(&self) -> Result<String, String> {
+        info!("MOCK: Dump Hierarchy");
+        Ok(r#"<node class="android.widget.FrameLayout" bounds="[0,0][1080,2400]">
+  <node class="android.widget.Button" text="Search" id="search_button" bounds="[100,100][200,200]" clickable="true" />
+  <node class="android.widget.EditText" text="" id="search_input" bounds="[200,100][800,200]" editable="true" />
+  <node class="android.widget.TextView" text="Welcome to Mock Android" bounds="[100,300][900,400]" />
+</node>"#.to_string())
+    }
+    async fn screenshot(&self) -> Result<Vec<u8>, String> {
+        info!("MOCK: Screenshot");
+        // 1x1 Transparent PNG
+        Ok(vec![
+            137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 244, 113, 100, 31, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+        ])
+    }
 }
 
 
