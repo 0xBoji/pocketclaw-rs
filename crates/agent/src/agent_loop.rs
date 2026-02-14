@@ -105,7 +105,9 @@ impl AgentLoop {
     /// Send an error/warning message back to the user via the bus.
     fn send_error(&self, session_key: &str, text: &str) {
         let error_msg = Message::new("agent", session_key, Role::Assistant, text);
-        let _ = self.bus.publish(Event::OutboundMessage(error_msg));
+        if let Err(e) = self.bus.publish(Event::OutboundMessage(error_msg)) {
+            error!("Failed to publish error outbound message: {}", e);
+        }
     }
 
     async fn process_message(&self, msg: Message) {
@@ -309,7 +311,9 @@ impl AgentLoop {
             self.sessions.add_message(&msg.session_key, response_msg.clone()).await;
 
             // Publish Outbound
-            let _ = self.bus.publish(Event::OutboundMessage(response_msg));
+            if let Err(e) = self.bus.publish(Event::OutboundMessage(response_msg)) {
+                error!("Failed to publish outbound message: {}", e);
+            }
 
             // Auto-summarize and trim history
             self.maybe_summarize_and_trim(&msg.session_key).await;

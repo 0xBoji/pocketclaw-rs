@@ -3,9 +3,9 @@ use pocketclaw_core::channel::ChannelAdapter;
 use pocketclaw_core::types::{Message, Role};
 use std::sync::Arc;
 use teloxide::prelude::*;
-use teloxide::types::{ChatAction, ParseMode};
+use teloxide::types::ChatAction;
 use async_trait::async_trait;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 pub struct TelegramBot {
     bus: Arc<MessageBus>,
@@ -13,8 +13,68 @@ pub struct TelegramBot {
 }
 
 impl TelegramBot {
+    const TELEGRAM_TEXT_LIMIT: usize = 3500;
+
     pub fn new(bus: Arc<MessageBus>, token: String) -> Self {
         Self { bus, token }
+    }
+
+    fn split_for_telegram(content: &str, max_len: usize) -> Vec<String> {
+        if content.is_empty() {
+            return vec![String::new()];
+        }
+
+        let mut chunks = Vec::new();
+        let mut current = String::new();
+
+        for line in content.lines() {
+            let candidate_len = if current.is_empty() {
+                line.len()
+            } else {
+                current.len() + 1 + line.len()
+            };
+
+            if candidate_len <= max_len {
+                if !current.is_empty() {
+                    current.push('\n');
+                }
+                current.push_str(line);
+                continue;
+            }
+
+            if !current.is_empty() {
+                chunks.push(current);
+                current = String::new();
+            }
+
+            if line.len() <= max_len {
+                current.push_str(line);
+                continue;
+            }
+
+            let mut start = 0;
+            while start < line.len() {
+                let mut end = std::cmp::min(start + max_len, line.len());
+                while !line.is_char_boundary(end) && end > start {
+                    end -= 1;
+                }
+                if end == start {
+                    end = std::cmp::min(start + 1, line.len());
+                }
+                chunks.push(line[start..end].to_string());
+                start = end;
+            }
+        }
+
+        if !current.is_empty() {
+            chunks.push(current);
+        }
+
+        if chunks.is_empty() {
+            vec![String::new()]
+        } else {
+            chunks
+        }
     }
 
     /// Internal start method (called by ChannelAdapter::start)
@@ -159,17 +219,19 @@ impl TelegramBot {
                                 let chat_id_str =
                                     msg.session_key.strip_prefix("telegram:").unwrap();
                                 if let Ok(chat_id) = chat_id_str.parse::<i64>() {
-                                    // Try with Markdown first, fallback to plain text
-                                    let result = bot_clone
-                                        .send_message(ChatId(chat_id), &msg.content)
-                                        .parse_mode(ParseMode::MarkdownV2)
-                                        .await;
+                                    let chunks = TelegramBot::split_for_telegram(
+                                        &msg.content,
+                                        TelegramBot::TELEGRAM_TEXT_LIMIT,
+                                    );
 
-                                    if result.is_err() {
-                                        warn!("Markdown send failed, falling back to plain text");
-                                        let _ = bot_clone
-                                            .send_message(ChatId(chat_id), &msg.content)
-                                            .await;
+                                    for part in chunks {
+                                        if let Err(e) = bot_clone
+                                            .send_message(ChatId(chat_id), part)
+                                            .await
+                                        {
+                                            error!("Failed to send telegram outbound message: {}", e);
+                                            break;
+                                        }
                                     }
                                 }
                             }
