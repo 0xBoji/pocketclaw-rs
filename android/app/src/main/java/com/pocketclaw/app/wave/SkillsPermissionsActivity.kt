@@ -20,6 +20,8 @@ class SkillsPermissionsActivity : AppCompatActivity() {
         val (scroll, root) = UiFactory.screen(this)
         root.addView(UiFactory.title(this, "Screen 4: Skill Permissions"))
         root.addView(UiFactory.subtitle(this, "Xem skill manifests trong workspace va cap quyen su dung."))
+        root.addView(UiFactory.hint(this, "Workspace: ${config.workspace}"))
+        root.addView(UiFactory.hint(this, "Scan path: ${File(config.workspace, "skills").absolutePath}"))
 
         val skills = discoverSkills(config.workspace)
         val approved = loadApproved(store.approvedSkillsFile())
