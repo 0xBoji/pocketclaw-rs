@@ -14,6 +14,8 @@ import java.io.File
 class PocketClawService : Service() {
 
     private val CHANNEL_ID = "PocketClawChannel"
+    private val NOTIFICATION_ID = 1
+    @Volatile
     private var isRunning = false
 
     override fun onBind(intent: Intent): IBinder? {
@@ -27,12 +29,17 @@ class PocketClawService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") {
-            stopSelf()
             isRunning = false
+            Thread {
+                RustBridge.stopServer()
+            }.start()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
             return START_NOT_STICKY
         }
 
         if (!isRunning) {
+            isRunning = true
             val notificationIntent = Intent(this, ControllerDashboardActivity::class.java)
             val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
@@ -43,21 +50,30 @@ class PocketClawService : Service() {
                 .setContentTitle("PocketClaw Agent")
                 .setContentText("Running local gateway on Android")
                 .setSmallIcon(android.R.drawable.sym_def_app_icon)
+                .setOngoing(true)
                 .setContentIntent(pendingIntent)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopPendingIntent)
                 .build()
 
-            startForeground(1, notification)
+            startForeground(NOTIFICATION_ID, notification)
 
             Thread {
-                isRunning = true
                 val configPath = setupConfigFile()
                 RustBridge.startServer(configPath)
-                stopSelf()
             }.start()
         }
 
         return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isRunning) {
+            Thread {
+                RustBridge.stopServer()
+            }.start()
+        }
+        isRunning = false
     }
 
     private fun setupConfigFile(): String {
