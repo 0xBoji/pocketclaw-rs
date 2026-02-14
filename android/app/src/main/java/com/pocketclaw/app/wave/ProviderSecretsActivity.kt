@@ -144,7 +144,7 @@ class ProviderSecretsActivity : AppCompatActivity() {
                 list.add(0, selectedModel)
             }
             if (list.isEmpty()) {
-                list.add("gpt-4o-mini")
+                list.add("gpt-5.2-mini")
             }
             modelOptions.clear()
             modelOptions.addAll(list)

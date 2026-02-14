@@ -93,7 +93,7 @@ Workflow:
 
             val providers = json.optJSONObject("providers")
             if (providers != null) {
-                val priority = listOf("openai", "google", "anthropic", "openrouter", "groq")
+                val priority = ModelCatalog.providers.toList()
                 for (name in priority) {
                     if (providers.has(name)) {
                         data.provider = name

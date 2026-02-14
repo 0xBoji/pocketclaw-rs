@@ -40,7 +40,7 @@ class SetupWizardActivity : AppCompatActivity() {
     private var step: Int = 0
 
     private var selectedProvider: String = "openai"
-    private var selectedModel: String = "gpt-4o-mini"
+    private var selectedModel: String = "gpt-5.2-mini"
     private var apiKey: String = ""
     private var selectedChannel: String = "telegram"
     private var channelApiKey: String = ""
@@ -57,12 +57,12 @@ class SetupWizardActivity : AppCompatActivity() {
         store = AppConfigStore(this)
         config = store.load()
 
-        selectedProvider = config.provider.ifBlank { "openai" }
+        selectedProvider = config.provider.ifBlank { providers.firstOrNull() ?: "openai" }
         if (selectedProvider !in providers) {
-            selectedProvider = "openai"
+            selectedProvider = providers.firstOrNull() ?: "openai"
         }
         selectedModel = config.model.ifBlank {
-            providerModels[selectedProvider]?.firstOrNull() ?: "gpt-4o-mini"
+            providerModels[selectedProvider]?.firstOrNull() ?: "gpt-5.2-mini"
         }
         apiKey = config.apiKey
 
