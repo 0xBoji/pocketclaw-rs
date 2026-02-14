@@ -42,6 +42,27 @@ fn extract_domain(url: &str) -> Option<String> {
     Some(domain.to_lowercase())
 }
 
+fn is_search_engine_query_url(url: &str, domain: &str) -> bool {
+    let known_search_hosts = [
+        "google.com",
+        "www.google.com",
+        "bing.com",
+        "www.bing.com",
+        "duckduckgo.com",
+        "www.duckduckgo.com",
+        "search.yahoo.com",
+        "yandex.com",
+        "www.yandex.com",
+        "baidu.com",
+        "www.baidu.com",
+    ];
+    let lower_url = url.to_lowercase();
+    let is_known_host = known_search_hosts
+        .iter()
+        .any(|h| domain == *h || domain.ends_with(&format!(".{}", h)));
+    is_known_host && (lower_url.contains("/search?") || lower_url.contains("?q=") || lower_url.contains("&q="))
+}
+
 /// Resolve a domain and check that none of its IPs are private (SSRF protection).
 async fn check_ssrf(domain: &str, port: u16) -> Result<(), ToolError> {
     let addr_str = format!("{}:{}", domain, port);
@@ -117,6 +138,12 @@ impl Tool for WebFetchTool {
             .map_err(|e| ToolError::InvalidArgs(e.to_string()))?;
 
         let domain = extract_domain(&args.url).unwrap_or_default();
+
+        if is_search_engine_query_url(&args.url, &domain) {
+            return Err(ToolError::ExecutionError(
+                "Search engine result URLs are blocked in web_fetch. Use web_search (Brave API) for search queries.".to_string(),
+            ));
+        }
 
         // Network allowlist check
         if !self.sandbox.network_allowlist.is_empty() {
