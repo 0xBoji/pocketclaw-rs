@@ -189,7 +189,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("clock should be after epoch")
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("pocketclaw-tools-{tag}-{nonce}"));
+        let path = std::env::temp_dir().join(format!("phoneclaw-tools-{tag}-{nonce}"));
         fs::create_dir_all(&path).expect("failed to create workspace");
         path
     }
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn validate_rejects_absolute_path_outside_workspace() {
         let workspace = mk_temp_workspace("outside");
-        let outside = std::env::temp_dir().join("outside-pocketclaw.txt");
+        let outside = std::env::temp_dir().join("outside-phoneclaw.txt");
         fs::write(&outside, "outside").expect("failed to create outside file");
 
         let err = validate_path(&workspace, outside.to_string_lossy().as_ref())

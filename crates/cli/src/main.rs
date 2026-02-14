@@ -1,47 +1,47 @@
 use clap::{Parser, Subcommand};
-use pocketclaw_agent::agent_loop::AgentLoop;
-use pocketclaw_agent::context::ContextBuilder;
-use pocketclaw_agent::session::SessionManager;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::channel::{
+use phoneclaw_agent::agent_loop::AgentLoop;
+use phoneclaw_agent::context::ContextBuilder;
+use phoneclaw_agent::session::SessionManager;
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::channel::{
     is_native_channel_supported, CHANNEL_GOOGLE_CHAT, CHANNEL_IMESSAGE, CHANNEL_MATRIX,
     CHANNEL_SIGNAL, CHANNEL_TEAMS, CHANNEL_WEBCHAT, CHANNEL_ZALO,
 };
-use pocketclaw_core::config::AppConfig;
-use pocketclaw_core::types::{Message, Role};
-use pocketclaw_cron::{CronSchedule, CronService};
-use pocketclaw_heartbeat::HeartbeatService;
-use pocketclaw_providers::factory::create_provider;
-use pocketclaw_providers::LLMProvider;
-use pocketclaw_server::gateway::{Gateway, GatewayRuntimeConfig};
-use pocketclaw_core::channel::ChannelAdapter;
-use pocketclaw_telegram::TelegramBot;
-use pocketclaw_discord::DiscordBot;
-use pocketclaw_slack::SlackAdapter;
-use pocketclaw_teams::TeamsAdapter;
-use pocketclaw_whatsapp::WhatsAppAdapter;
-use pocketclaw_zalo::ZaloAdapter;
-use pocketclaw_googlechat::GoogleChatAdapter;
-use pocketclaw_tools::exec_tool::ExecTool;
-use pocketclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
-use pocketclaw_tools::registry::ToolRegistry;
-use pocketclaw_tools::platform_tools::{ChannelHealthTool, DatetimeNowTool, MetricsSnapshotTool};
-use pocketclaw_tools::sessions_tools::{SessionsHistoryTool, SessionsListTool, SessionsSendTool};
-use pocketclaw_tools::sandbox::SandboxConfig;
-use pocketclaw_tools::web_fetch::WebFetchTool;
-use pocketclaw_tools::web_search::WebSearchTool;
+use phoneclaw_core::config::AppConfig;
+use phoneclaw_core::types::{Message, Role};
+use phoneclaw_cron::{CronSchedule, CronService};
+use phoneclaw_heartbeat::HeartbeatService;
+use phoneclaw_providers::factory::create_provider;
+use phoneclaw_providers::LLMProvider;
+use phoneclaw_server::gateway::{Gateway, GatewayRuntimeConfig};
+use phoneclaw_core::channel::ChannelAdapter;
+use phoneclaw_telegram::TelegramBot;
+use phoneclaw_discord::DiscordBot;
+use phoneclaw_slack::SlackAdapter;
+use phoneclaw_teams::TeamsAdapter;
+use phoneclaw_whatsapp::WhatsAppAdapter;
+use phoneclaw_zalo::ZaloAdapter;
+use phoneclaw_googlechat::GoogleChatAdapter;
+use phoneclaw_tools::exec_tool::ExecTool;
+use phoneclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
+use phoneclaw_tools::registry::ToolRegistry;
+use phoneclaw_tools::platform_tools::{ChannelHealthTool, DatetimeNowTool, MetricsSnapshotTool};
+use phoneclaw_tools::sessions_tools::{SessionsHistoryTool, SessionsListTool, SessionsSendTool};
+use phoneclaw_tools::sandbox::SandboxConfig;
+use phoneclaw_tools::web_fetch::WebFetchTool;
+use phoneclaw_tools::web_search::WebSearchTool;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{error, info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 use tracing_appender;
 use tokio::sync::{mpsc, RwLock};
-use pocketclaw_core::metrics::MetricsStore;
+use phoneclaw_core::metrics::MetricsStore;
 
 const VERSION: &str = "0.1.0";
 
 #[derive(Parser)]
-#[command(name = "pocketclaw")]
+#[command(name = "phoneclaw")]
 #[command(version = VERSION)]
 #[command(about = "🦞 Ultra-lightweight personal AI assistant in Rust")]
 struct Cli {
@@ -64,7 +64,7 @@ enum Commands {
     },
     /// Run the onboarding wizard
     Onboard,
-    /// Show pocketclaw status
+    /// Show phoneclaw status
     Status,
     /// Manage scheduled tasks
     Cron {
@@ -142,7 +142,7 @@ enum SkillsActions {
 mod onboard;
 
 fn get_config_dir() -> PathBuf {
-    dirs::home_dir().unwrap().join(".pocketclaw")
+    dirs::home_dir().unwrap().join(".phoneclaw")
 }
 
 fn get_cron_store_path() -> PathBuf {
@@ -386,7 +386,7 @@ async fn main() -> anyhow::Result<()> {
     // === Commands that DO require config ===
     let config = AppConfig::load(None).map_err(|e| {
         anyhow::anyhow!(
-            "Failed to load config: {}. Run 'pocketclaw onboard' first.",
+            "Failed to load config: {}. Run 'phoneclaw onboard' first.",
             e
         )
     })?;
@@ -425,26 +425,26 @@ async fn main() -> anyhow::Result<()> {
     if let Some(Commands::Gateway { mock_android: true }) = &cli.command {
         info!("Using Mock Android Bridge");
         let bridge = Arc::new(MockAndroidBridge);
-        tools.register(Arc::new(pocketclaw_tools::android_tools::AndroidActionTool::new(bridge.clone()))).await;
-        tools.register(Arc::new(pocketclaw_tools::android_tools::AndroidScreenTool::new(bridge.clone()))).await;
+        tools.register(Arc::new(phoneclaw_tools::android_tools::AndroidActionTool::new(bridge.clone()))).await;
+        tools.register(Arc::new(phoneclaw_tools::android_tools::AndroidScreenTool::new(bridge.clone()))).await;
         info!("Mock Android Tools registered");
     }
 
     if let Some(web_cfg) = &config_val.web {
         if let Some(brave_key) = &web_cfg.brave_key {
-            let tool: Arc<dyn pocketclaw_tools::Tool> = Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone()));
+            let tool: Arc<dyn phoneclaw_tools::Tool> = Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone()));
             tools
                 .register(tool)
                 .await;
         }
     }
 
-    let db_path = workspace.join("pocketclaw.db");
+    let db_path = workspace.join("phoneclaw.db");
     let store_url = format!("sqlite://{}?mode=rwc", db_path.display()); // rwc = read write create
-    let store = pocketclaw_persistence::SqliteSessionStore::new(&store_url).await?;
+    let store = phoneclaw_persistence::SqliteSessionStore::new(&store_url).await?;
 
     let sheets_client = if let Some(sheets_cfg) = &config_val.google_sheets {
-        match pocketclaw_agent::sheets::SheetsClient::new(
+        match phoneclaw_agent::sheets::SheetsClient::new(
             sheets_cfg.service_account_json.clone(),
             sheets_cfg.spreadsheet_id.clone(),
         ).await {
@@ -494,7 +494,7 @@ async fn main() -> anyhow::Result<()> {
     let _cron_loop_handle = cron_service.clone().start_loop(bus.clone());
     info!("Cron service initialized and loop started");
 
-    tools.register(Arc::new(pocketclaw_tools::cron_tools::CronTool::new(cron_service.clone()))).await;
+    tools.register(Arc::new(phoneclaw_tools::cron_tools::CronTool::new(cron_service.clone()))).await;
 
     let agent = AgentLoop::new(
         bus.clone(),
@@ -513,7 +513,7 @@ async fn main() -> anyhow::Result<()> {
             if let Ok(event) = rx.recv().await {
                 match event {
                     Event::OutboundMessage(msg) => {
-                        println!("\n🦞 PocketClaw: {}\n", msg.content);
+                        println!("\n🦞 PhoneClaw: {}\n", msg.content);
                     }
                     _ => {}
                 }
@@ -564,7 +564,7 @@ async fn main() -> anyhow::Result<()> {
 
             // Voice transcription
             if let Some(groq_cfg) = &config_val.providers.groq {
-                let _transcriber = pocketclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
+                let _transcriber = phoneclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
                 info!("Groq voice transcription enabled");
             }
 
@@ -598,7 +598,7 @@ async fn main() -> anyhow::Result<()> {
             run_skills(action, &workspace);
         }
         _ => {
-            println!("🦞 pocketclaw v{}", VERSION);
+            println!("🦞 phoneclaw v{}", VERSION);
             println!("Use --help for usage.");
         }
     }
@@ -606,7 +606,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-use pocketclaw_tools::android_tools::AndroidBridge;
+use phoneclaw_tools::android_tools::AndroidBridge;
 use async_trait::async_trait;
 
 struct MockAndroidBridge;
@@ -655,12 +655,12 @@ impl AndroidBridge for MockAndroidBridge {
 fn run_status() {
     let config_path = get_config_dir().join("config.json");
 
-    println!("🦞 pocketclaw Status\n");
+    println!("🦞 phoneclaw Status\n");
 
     if config_path.exists() {
         println!("Config: {} ✓", config_path.display());
     } else {
-        println!("Config: {} ✗ (run 'pocketclaw onboard')", config_path.display());
+        println!("Config: {} ✗ (run 'phoneclaw onboard')", config_path.display());
         return;
     }
 
@@ -870,7 +870,7 @@ fn run_skills(action: &SkillsActions, workspace: &std::path::Path) {
             }
         }
         SkillsActions::Approve { name } => {
-            use pocketclaw_core::permissions::ApprovedSkills;
+            use phoneclaw_core::permissions::ApprovedSkills;
             let mut approved = ApprovedSkills::load(&ApprovedSkills::default_path());
             
             // Verify skill exists?
@@ -888,7 +888,7 @@ fn run_skills(action: &SkillsActions, workspace: &std::path::Path) {
             }
         }
         SkillsActions::Revoke { name } => {
-            use pocketclaw_core::permissions::ApprovedSkills;
+            use phoneclaw_core::permissions::ApprovedSkills;
             let mut approved = ApprovedSkills::load(&ApprovedSkills::default_path());
             
             approved.revoke(name);

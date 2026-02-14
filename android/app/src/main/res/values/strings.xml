@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PocketClaw</string>
-    <string name="accessibility_service_label">PocketClaw Controller</string>
-    <string name="accessibility_service_description">Allows PocketClaw to control apps on your device to automate tasks.</string>
+    <string name="app_name">PhoneClaw</string>
+    <string name="accessibility_service_label">PhoneClaw Controller</string>
+    <string name="accessibility_service_description">Allows PhoneClaw to control apps on your device to automate tasks.</string>
 </resources>

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
-use pocketclaw_core::types::Message;
-use pocketclaw_persistence::SqliteSessionStore;
+use phoneclaw_core::types::Message;
+use phoneclaw_persistence::SqliteSessionStore;
 use crate::sheets::SheetsClient;
 use tracing::{error, info};
 

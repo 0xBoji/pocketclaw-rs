@@ -1,4 +1,4 @@
-package com.pocketclaw.app
+package com.phoneclaw.app
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
@@ -7,16 +7,16 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.util.Log
 
-class PocketClawAccessibilityService : AccessibilityService() {
+class PhoneClawAccessibilityService : AccessibilityService() {
 
     companion object {
-        var instance: PocketClawAccessibilityService? = null
+        var instance: PhoneClawAccessibilityService? = null
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        Log.d("PocketClaw", "Accessibility Service Connected")
+        Log.d("PhoneClaw", "Accessibility Service Connected")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -24,7 +24,7 @@ class PocketClawAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {
-        Log.d("PocketClaw", "Accessibility Service Interrupted")
+        Log.d("PhoneClaw", "Accessibility Service Interrupted")
     }
 
     override fun onDestroy() {
@@ -140,7 +140,7 @@ class PocketClawAccessibilityService : AccessibilityService() {
     
     fun takeScreenshotSync(): ByteArray? {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
-            Log.e("PocketClaw", "Screenshot requires Android 11+")
+            Log.e("PhoneClaw", "Screenshot requires Android 11+")
             return null
         }
 
@@ -162,14 +162,14 @@ class PocketClawAccessibilityService : AccessibilityService() {
                         hardwareBitmap?.recycle()
                         screenshot.hardwareBuffer.close()
                     } catch (e: Exception) {
-                        Log.e("PocketClaw", "Screenshot processing failed", e)
+                        Log.e("PhoneClaw", "Screenshot processing failed", e)
                     } finally {
                         latch.countDown()
                     }
                 }
 
                 override fun onFailure(errorCode: Int) {
-                    Log.e("PocketClaw", "Screenshot failed with error code: $errorCode")
+                    Log.e("PhoneClaw", "Screenshot failed with error code: $errorCode")
                     latch.countDown()
                 }
             }
@@ -178,7 +178,7 @@ class PocketClawAccessibilityService : AccessibilityService() {
         try {
             latch.await(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
         } catch (e: InterruptedException) {
-            Log.e("PocketClaw", "Screenshot timeout")
+            Log.e("PhoneClaw", "Screenshot timeout")
             return null
         }
         

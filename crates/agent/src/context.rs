@@ -1,6 +1,6 @@
-use pocketclaw_core::permissions::ApprovedSkills;
-use pocketclaw_core::types::{Message, Role};
-use pocketclaw_skills::SkillsLoader;
+use phoneclaw_core::permissions::ApprovedSkills;
+use phoneclaw_core::types::{Message, Role};
+use phoneclaw_skills::SkillsLoader;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -136,7 +136,7 @@ impl ContextBuilder {
     }
 
     fn build_system_prompt(&self) -> String {
-        let mut prompt = String::from("You are PocketClaw, an intelligent AI assistant.\n");
+        let mut prompt = String::from("You are PhoneClaw, an intelligent AI assistant.\n");
         prompt.push_str("You must answer the user's request accurately and concisely.\n");
         prompt.push_str("If you need to perform actions, use the provided tools.\n");
         prompt.push_str("When user asks to search the web/news/latest info, prefer `web_search` first.\n");

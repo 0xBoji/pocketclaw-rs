@@ -72,7 +72,7 @@ impl SecretsStore {
     /// Get the default secrets file path.
     pub fn default_path() -> PathBuf {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".pocketclaw/secrets.json")
+        PathBuf::from(home).join(".phoneclaw/secrets.json")
     }
 }
 

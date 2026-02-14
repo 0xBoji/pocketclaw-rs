@@ -1,13 +1,13 @@
 [package]
-name = "pocketclaw-skills"
+name = "phoneclaw-skills"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
-pocketclaw-tools = { workspace = true }
+phoneclaw-core = { workspace = true }
+phoneclaw-tools = { workspace = true }
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true

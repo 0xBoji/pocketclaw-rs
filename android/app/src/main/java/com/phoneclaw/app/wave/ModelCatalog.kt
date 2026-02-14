@@ -1,4 +1,4 @@
-package com.pocketclaw.app.wave
+package com.phoneclaw.app.wave
 
 object ModelCatalog {
     val providers = arrayOf(

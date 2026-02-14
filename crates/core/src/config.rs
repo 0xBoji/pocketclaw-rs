@@ -170,12 +170,12 @@ impl AppConfig {
             path
         } else {
             let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-            PathBuf::from(home).join(".pocketclaw/config.json")
+            PathBuf::from(home).join(".phoneclaw/config.json")
         };
 
         let s = Config::builder()
             .add_source(File::from(config_path).required(true))
-            // Add environment variables (POCKETCLAW_...)
+            // Add environment variables (PHONECLAW_...)
             .build()?;
 
         s.try_deserialize()

@@ -1,6 +1,6 @@
 use chrono::Local;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::types::{Message, Role};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};

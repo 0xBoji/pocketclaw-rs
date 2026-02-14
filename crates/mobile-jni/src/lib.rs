@@ -2,7 +2,7 @@ use jni::objects::{GlobalRef, JClass, JString, JValue};
 use jni::sys::jstring;
 use jni::{JNIEnv, JavaVM};
 use log::LevelFilter;
-use pocketclaw_tools::android_tools::AndroidBridge;
+use phoneclaw_tools::android_tools::AndroidBridge;
 use std::path::PathBuf;
 use std::sync::{Arc, Once};
 use std::thread;
@@ -80,7 +80,7 @@ impl AndroidBridge for AndroidBridgeImpl {
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
+pub extern "system" fn Java_com_phoneclaw_app_RustBridge_startServer(
     mut env: JNIEnv,
     class: JClass,
     config_path: JString,
@@ -90,7 +90,7 @@ pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
         android_logger::init_once(
             android_logger::Config::default()
                 .with_max_level(LevelFilter::Info)
-                .with_tag("PocketClaw"),
+                .with_tag("PhoneClaw"),
         );
     });
 
@@ -103,7 +103,7 @@ pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
     if let Some(config_dir) = config_path.parent() {
         let approved_path = config_dir.join("approved_skills.json");
         std::env::set_var(
-            "POCKETCLAW_APPROVED_SKILLS_PATH",
+            "PHONECLAW_APPROVED_SKILLS_PATH",
             approved_path.to_string_lossy().to_string(),
         );
     }
@@ -113,7 +113,7 @@ pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
     let bridge_class = env.new_global_ref(class).expect("Failed to create GlobalRef");
     let bridge = Arc::new(AndroidBridgeImpl::new(vm, bridge_class));
 
-    log::info!("Starting PocketClaw Server with config: {:?}", config_path);
+    log::info!("Starting PhoneClaw Server with config: {:?}", config_path);
 
     // Spawn the server in a new thread because start_server blocks
     thread::spawn(move || {
@@ -124,7 +124,7 @@ pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
 
         rt.block_on(async move {
             // Pass the bridge to start_server
-            if let Err(e) = pocketclaw_cli::start_server(Some(config_path), Some(bridge)).await {
+            if let Err(e) = phoneclaw_cli::start_server(Some(config_path), Some(bridge)).await {
                 log::error!("Server failed: {}", e);
             }
         });
@@ -137,11 +137,11 @@ pub extern "system" fn Java_com_pocketclaw_app_RustBridge_startServer(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pocketclaw_app_RustBridge_stopServer(
+pub extern "system" fn Java_com_phoneclaw_app_RustBridge_stopServer(
     env: JNIEnv,
     _class: JClass,
 ) -> jstring {
-    // TODO: Implement graceful shutdown mechanism in pocketclaw-cli first
+    // TODO: Implement graceful shutdown mechanism in phoneclaw-cli first
     log::info!("Stop server requested (not fully implemented)");
     
     let output = env

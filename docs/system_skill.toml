@@ -1,7 +1,7 @@
 [metadata]
 name = "system"
 version = "1.0.0"
-description = "Core system capabilities for PocketClaw. Grants access to file operations, command execution, and web fetching."
+description = "Core system capabilities for PhoneClaw. Grants access to file operations, command execution, and web fetching."
 always = true
 
 [requirements]

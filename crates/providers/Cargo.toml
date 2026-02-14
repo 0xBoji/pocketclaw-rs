@@ -1,12 +1,12 @@
 [package]
-name = "pocketclaw-providers"
+name = "phoneclaw-providers"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
+phoneclaw-core = { workspace = true }
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true

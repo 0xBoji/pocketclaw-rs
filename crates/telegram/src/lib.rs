@@ -1,6 +1,6 @@
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::channel::ChannelAdapter;
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::channel::ChannelAdapter;
+use phoneclaw_core::types::{Message, Role};
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::ChatAction;

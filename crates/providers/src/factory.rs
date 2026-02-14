@@ -2,7 +2,7 @@ use crate::anthropic::AnthropicProvider;
 use crate::google::GoogleProvider;
 use crate::openai::OpenAIProvider;
 use crate::LLMProvider;
-use pocketclaw_core::config::AppConfig;
+use phoneclaw_core::config::AppConfig;
 use std::sync::Arc;
 
 /// Create the appropriate LLM provider based on the application config.
@@ -28,6 +28,6 @@ pub fn create_provider(config: &AppConfig) -> anyhow::Result<Arc<dyn LLMProvider
             google_cfg.model.clone(),
         )))
     } else {
-        anyhow::bail!("No LLM provider configured. Run 'pocketclaw onboard' to set one up.");
+        anyhow::bail!("No LLM provider configured. Run 'phoneclaw onboard' to set one up.");
     }
 }

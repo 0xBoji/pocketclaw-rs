@@ -1,4 +1,4 @@
-package com.pocketclaw.app
+package com.phoneclaw.app
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,12 +8,12 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.pocketclaw.app.wave.ControllerDashboardActivity
+import com.phoneclaw.app.wave.ControllerDashboardActivity
 import java.io.File
 
-class PocketClawService : Service() {
+class PhoneClawService : Service() {
 
-    private val CHANNEL_ID = "PocketClawChannel"
+    private val CHANNEL_ID = "PhoneClawChannel"
     private val NOTIFICATION_ID = 1
     @Volatile
     private var isRunning = false
@@ -43,11 +43,11 @@ class PocketClawService : Service() {
             val notificationIntent = Intent(this, ControllerDashboardActivity::class.java)
             val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
-            val stopIntent = Intent(this, PocketClawService::class.java).apply { action = "STOP" }
+            val stopIntent = Intent(this, PhoneClawService::class.java).apply { action = "STOP" }
             val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
             val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("PocketClaw Agent")
+                .setContentTitle("PhoneClaw Agent")
                 .setContentText("Running local gateway on Android")
                 .setSmallIcon(android.R.drawable.sym_def_app_icon)
                 .setOngoing(true)
@@ -77,7 +77,7 @@ class PocketClawService : Service() {
     }
 
     private fun setupConfigFile(): String {
-        val configDir = File(filesDir, ".pocketclaw")
+        val configDir = File(filesDir, ".phoneclaw")
         if (!configDir.exists()) configDir.mkdirs()
         return File(configDir, "config.json").absolutePath
     }
@@ -86,7 +86,7 @@ class PocketClawService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 CHANNEL_ID,
-                "PocketClaw Service Channel",
+                "PhoneClaw Service Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
             val manager = getSystemService(NotificationManager::class.java)

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::channel::ChannelAdapter;
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::channel::ChannelAdapter;
 use reqwest::Client;
 use serde_json::json;
 use std::sync::Arc;

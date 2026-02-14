@@ -1,6 +1,6 @@
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::channel::ChannelAdapter;
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::channel::ChannelAdapter;
+use phoneclaw_core::types::{Message, Role};
 use serenity::async_trait;
 use serenity::model::channel::Message as DiscordMessage;
 use serenity::model::gateway::Ready;

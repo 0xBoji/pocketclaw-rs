@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::types::{Message, Role};
 use tokio::time::{interval, Duration};
 use tracing::{error, info};
 

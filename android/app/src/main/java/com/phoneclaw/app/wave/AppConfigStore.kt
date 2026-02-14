@@ -1,4 +1,4 @@
-package com.pocketclaw.app.wave
+package com.phoneclaw.app.wave
 
 import android.content.Context
 import org.json.JSONArray
@@ -42,8 +42,8 @@ data class AppConfigData(
 
 class AppConfigStore(private val context: Context) {
     companion object {
-        private const val PERSONA_BLOCK_START = "<!-- pocketclaw:persona:start -->"
-        private const val PERSONA_BLOCK_END = "<!-- pocketclaw:persona:end -->"
+        private const val PERSONA_BLOCK_START = "<!-- phoneclaw:persona:start -->"
+        private const val PERSONA_BLOCK_END = "<!-- phoneclaw:persona:end -->"
         private const val DEFAULT_ANDROID_NAV_SKILL = """
 ---
 name: android_nav
@@ -65,7 +65,7 @@ Workflow:
 """
     }
 
-    private val configDir: File = File(context.filesDir, ".pocketclaw")
+    private val configDir: File = File(context.filesDir, ".phoneclaw")
     private val configFile: File = File(configDir, "config.json")
 
     fun ensureDirs() {
@@ -306,7 +306,7 @@ Workflow:
     }
 
     fun approvedSkillsFile(): File {
-        val dir = File(context.filesDir, ".pocketclaw")
+        val dir = File(context.filesDir, ".phoneclaw")
         if (!dir.exists()) dir.mkdirs()
         return File(dir, "approved_skills.json")
     }

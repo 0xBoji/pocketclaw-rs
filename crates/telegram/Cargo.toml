@@ -1,12 +1,12 @@
 [package]
-name = "pocketclaw-telegram"
+name = "phoneclaw-telegram"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
+phoneclaw-core = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 teloxide = { version = "0.12", default-features = false, features = ["macros", "rustls", "ctrlc_handler"] }

@@ -1,10 +1,10 @@
-package com.pocketclaw.app
+package com.phoneclaw.app
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.pocketclaw.app.wave.AppConfigStore
-import com.pocketclaw.app.wave.ControllerDashboardActivity
+import com.phoneclaw.app.wave.AppConfigStore
+import com.phoneclaw.app.wave.ControllerDashboardActivity
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

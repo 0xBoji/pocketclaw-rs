@@ -1,12 +1,12 @@
 [package]
-name = "pocketclaw-discord"
+name = "phoneclaw-discord"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
+phoneclaw-core = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }

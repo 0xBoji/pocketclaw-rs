@@ -15,7 +15,7 @@ impl WebFetchTool {
     pub fn new(sandbox: SandboxConfig) -> Self {
         Self {
             client: Client::builder()
-                .user_agent("PocketClaw/1.0")
+                .user_agent("PhoneClaw/1.0")
                 .connect_timeout(std::time::Duration::from_secs(8))
                 .timeout(std::time::Duration::from_secs(20))
                 .redirect(reqwest::redirect::Policy::limited(5))

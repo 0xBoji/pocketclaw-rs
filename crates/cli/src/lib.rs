@@ -1,44 +1,44 @@
 pub mod onboard;
 pub mod verify;
 
-use pocketclaw_agent::agent_loop::AgentLoop;
-use pocketclaw_agent::context::ContextBuilder;
-use pocketclaw_agent::session::SessionManager;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::channel::{
+use phoneclaw_agent::agent_loop::AgentLoop;
+use phoneclaw_agent::context::ContextBuilder;
+use phoneclaw_agent::session::SessionManager;
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::channel::{
     is_native_channel_supported, CHANNEL_GOOGLE_CHAT, CHANNEL_IMESSAGE, CHANNEL_MATRIX,
     CHANNEL_SIGNAL, CHANNEL_TEAMS, CHANNEL_WEBCHAT, CHANNEL_ZALO,
 };
-use pocketclaw_core::config::AppConfig;
-use pocketclaw_cron::CronService;
-use pocketclaw_heartbeat::HeartbeatService;
-use pocketclaw_providers::factory::create_provider;
-use pocketclaw_providers::LLMProvider;
-use pocketclaw_server::gateway::{Gateway, GatewayRuntimeConfig};
-use pocketclaw_core::channel::ChannelAdapter;
-use pocketclaw_telegram::TelegramBot;
-use pocketclaw_discord::DiscordBot;
-use pocketclaw_slack::SlackAdapter;
-use pocketclaw_teams::TeamsAdapter;
-use pocketclaw_whatsapp::WhatsAppAdapter;
-use pocketclaw_zalo::ZaloAdapter;
-use pocketclaw_googlechat::GoogleChatAdapter;
-use pocketclaw_tools::sandbox::SandboxConfig;
-use pocketclaw_tools::exec_tool::ExecTool;
-use pocketclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
-use pocketclaw_tools::registry::ToolRegistry;
-use pocketclaw_tools::platform_tools::{ChannelHealthTool, DatetimeNowTool, MetricsSnapshotTool};
-use pocketclaw_tools::sessions_tools::{SessionsHistoryTool, SessionsListTool, SessionsSendTool};
-use pocketclaw_tools::web_fetch::WebFetchTool;
-use pocketclaw_tools::web_search::WebSearchTool;
-use pocketclaw_core::metrics::MetricsStore;
+use phoneclaw_core::config::AppConfig;
+use phoneclaw_cron::CronService;
+use phoneclaw_heartbeat::HeartbeatService;
+use phoneclaw_providers::factory::create_provider;
+use phoneclaw_providers::LLMProvider;
+use phoneclaw_server::gateway::{Gateway, GatewayRuntimeConfig};
+use phoneclaw_core::channel::ChannelAdapter;
+use phoneclaw_telegram::TelegramBot;
+use phoneclaw_discord::DiscordBot;
+use phoneclaw_slack::SlackAdapter;
+use phoneclaw_teams::TeamsAdapter;
+use phoneclaw_whatsapp::WhatsAppAdapter;
+use phoneclaw_zalo::ZaloAdapter;
+use phoneclaw_googlechat::GoogleChatAdapter;
+use phoneclaw_tools::sandbox::SandboxConfig;
+use phoneclaw_tools::exec_tool::ExecTool;
+use phoneclaw_tools::fs_tools::{ListDirTool, ReadFileTool, WriteFileTool};
+use phoneclaw_tools::registry::ToolRegistry;
+use phoneclaw_tools::platform_tools::{ChannelHealthTool, DatetimeNowTool, MetricsSnapshotTool};
+use phoneclaw_tools::sessions_tools::{SessionsHistoryTool, SessionsListTool, SessionsSendTool};
+use phoneclaw_tools::web_fetch::WebFetchTool;
+use phoneclaw_tools::web_search::WebSearchTool;
+use phoneclaw_core::metrics::MetricsStore;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{error, info};
 
 pub fn get_config_dir() -> PathBuf {
-    dirs::home_dir().unwrap().join(".pocketclaw")
+    dirs::home_dir().unwrap().join(".phoneclaw")
 }
 
 pub fn get_cron_store_path() -> PathBuf {
@@ -225,7 +225,7 @@ fn runtime_gateway_config(config: &AppConfig) -> GatewayRuntimeConfig {
 
 
 
-use pocketclaw_tools::android_tools::{AndroidBridge, AndroidActionTool, AndroidScreenTool};
+use phoneclaw_tools::android_tools::{AndroidBridge, AndroidActionTool, AndroidScreenTool};
 
 pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<Arc<dyn AndroidBridge>>) -> anyhow::Result<()> {
     // Save config path before it's consumed
@@ -234,7 +234,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
     // Initial Load
     let config = AppConfig::load(config_path.clone()).map_err(|e| {
         anyhow::anyhow!(
-            "Failed to load config: {}. Run 'pocketclaw onboard' first.",
+            "Failed to load config: {}. Run 'phoneclaw onboard' first.",
             e
         )
     })?;
@@ -271,7 +271,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
 
     if let Some(web_cfg) = &config_val.web {
         if let Some(brave_key) = &web_cfg.brave_key {
-            let tool: Arc<dyn pocketclaw_tools::Tool> = Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone()));
+            let tool: Arc<dyn phoneclaw_tools::Tool> = Arc::new(WebSearchTool::new(brave_key.clone(), sandbox.clone()));
             tools
                 .register(tool)
                 .await;
@@ -288,7 +288,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
 
     // Initialize Google Sheets Client if configured
     let sheets_client = if let Some(sheets_cfg) = &config_val.google_sheets {
-        match pocketclaw_agent::sheets::SheetsClient::new(
+        match phoneclaw_agent::sheets::SheetsClient::new(
             sheets_cfg.service_account_json.clone(),
             sheets_cfg.spreadsheet_id.clone(),
         )
@@ -307,9 +307,9 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
         None
     };
 
-    let db_path = workspace.join("pocketclaw.db");
+    let db_path = workspace.join("phoneclaw.db");
     let store_url = format!("sqlite://{}?mode=rwc", db_path.display());
-    let store = pocketclaw_persistence::SqliteSessionStore::new(&store_url).await?;
+    let store = phoneclaw_persistence::SqliteSessionStore::new(&store_url).await?;
     let session_store = store.clone();
     let sessions = SessionManager::new(store, sheets_client);
     tools
@@ -340,7 +340,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
         .as_ref()
         .and_then(|p| p.parent())
         .map(|dir| dir.join("cron/jobs.json"))
-        .unwrap_or_else(|| workspace.join(".pocketclaw/cron/jobs.json"));
+        .unwrap_or_else(|| workspace.join(".phoneclaw/cron/jobs.json"));
     if let Some(parent) = cron_store_path.parent() {
         let _ = tokio::fs::create_dir_all(parent).await;
     }
@@ -348,7 +348,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
     let _cron_loop_handle = cron_service.clone().start_loop(bus.clone());
     info!("Cron service initialized and loop started");
 
-    tools.register(Arc::new(pocketclaw_tools::cron_tools::CronTool::new(cron_service.clone()))).await;
+    tools.register(Arc::new(phoneclaw_tools::cron_tools::CronTool::new(cron_service.clone()))).await;
 
     let agent = AgentLoop::new(
         bus.clone(),
@@ -367,7 +367,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
             if let Ok(event) = rx.recv().await {
                 match event {
                     Event::OutboundMessage(msg) => {
-                        println!("\n🦞 PocketClaw: {}\n", msg.content);
+                        println!("\n🦞 PhoneClaw: {}\n", msg.content);
                     }
                     _ => {}
                 }
@@ -415,7 +415,7 @@ pub async fn start_server(config_path: Option<PathBuf>, android_bridge: Option<A
 
     // Voice transcription
     if let Some(groq_cfg) = &config_val.providers.groq {
-        let _transcriber = pocketclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
+        let _transcriber = phoneclaw_voice::GroqTranscriber::new(groq_cfg.api_key.clone());
         info!("Groq voice transcription enabled");
     }
 

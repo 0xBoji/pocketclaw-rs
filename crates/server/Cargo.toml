@@ -1,14 +1,14 @@
 [package]
-name = "pocketclaw-server"
+name = "phoneclaw-server"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
-pocketclaw-agent = { workspace = true }
-pocketclaw-persistence = { workspace = true }
+phoneclaw-core = { workspace = true }
+phoneclaw-agent = { workspace = true }
+phoneclaw-persistence = { workspace = true }
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true

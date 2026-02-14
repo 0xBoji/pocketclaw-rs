@@ -7,12 +7,12 @@ use axum::{
     routing::{get, post, put},
     Json, Router,
 };
-use pocketclaw_core::metrics::{MetricsStore, MetricsSnapshot};
+use phoneclaw_core::metrics::{MetricsStore, MetricsSnapshot};
 use tokio::sync::mpsc;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::channel::{target_personal_channels, native_supported_channels};
-use pocketclaw_core::types::{Message, Role};
-use pocketclaw_persistence::SqliteSessionStore;
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::channel::{target_personal_channels, native_supported_channels};
+use phoneclaw_core::types::{Message, Role};
+use phoneclaw_persistence::SqliteSessionStore;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, VecDeque};
@@ -24,7 +24,7 @@ use tokio::time::{interval, Duration};
 use tracing::{info, warn};
 use uuid::Uuid;
 use axum::extract::{Multipart, DefaultBodyLimit};
-use pocketclaw_core::attachment::AttachmentPolicy;
+use phoneclaw_core::attachment::AttachmentPolicy;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::io::AsyncWriteExt;
 use hmac::{Hmac, Mac};

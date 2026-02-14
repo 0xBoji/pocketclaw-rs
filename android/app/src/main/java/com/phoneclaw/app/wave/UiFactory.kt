@@ -1,4 +1,4 @@
-package com.pocketclaw.app.wave
+package com.phoneclaw.app.wave
 
 import android.content.Context
 import android.graphics.Color

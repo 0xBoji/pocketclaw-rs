@@ -1,4 +1,4 @@
-package com.pocketclaw.app
+package com.phoneclaw.app
 
 import android.content.Intent
 import android.os.Bundle
@@ -11,11 +11,11 @@ import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.pocketclaw.app.wave.AppConfigData
-import com.pocketclaw.app.wave.AppConfigStore
-import com.pocketclaw.app.wave.ControllerDashboardActivity
-import com.pocketclaw.app.wave.ModelCatalog
-import com.pocketclaw.app.wave.UiFactory
+import com.phoneclaw.app.wave.AppConfigData
+import com.phoneclaw.app.wave.AppConfigStore
+import com.phoneclaw.app.wave.ControllerDashboardActivity
+import com.phoneclaw.app.wave.ModelCatalog
+import com.phoneclaw.app.wave.UiFactory
 
 class SetupWizardActivity : AppCompatActivity() {
     private enum class Mode { QUICKSTART, MANUAL }
@@ -109,7 +109,7 @@ class SetupWizardActivity : AppCompatActivity() {
 
     private fun renderStep() {
         contentRoot.removeAllViews()
-        contentRoot.addView(UiFactory.title(this, "PocketClaw Setup Wizard"))
+        contentRoot.addView(UiFactory.title(this, "PhoneClaw Setup Wizard"))
         contentRoot.addView(UiFactory.subtitle(this, "Step ${step + 1}/7"))
         contentRoot.addView(UiFactory.hint(this, progressDots(step, 7)))
 

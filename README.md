@@ -1,6 +1,6 @@
-# pocketclaw-rs (Android-First Local Gateway)
+# phoneclaw-rs (Android-First Local Gateway)
 
-`pocketclaw-rs` is a local-first AI agent runtime focused on Android devices, especially old phones used as always-on local gateway nodes.
+`phoneclaw-rs` is a local-first AI agent runtime focused on Android devices, especially old phones used as always-on local gateway nodes.
 
 Primary goal: user only needs to set `provider + api key + model`, then start the gateway.
 
@@ -31,8 +31,8 @@ cargo install cargo-ndk
 ### 1.2 Clone repository
 
 ```bash
-git clone https://github.com/0xBoji/pocketclaw-rs.git
-cd pocketclaw-rs
+git clone https://github.com/0xBoji/phoneclaw-rs.git
+cd phoneclaw-rs
 ```
 
 ### 1.3 Build native libraries and APK
@@ -117,20 +117,20 @@ source "$HOME/.cargo/env"
 ### 2.2 Clone and build
 
 ```bash
-git clone https://github.com/0xBoji/pocketclaw-rs.git
-cd pocketclaw-rs
+git clone https://github.com/0xBoji/phoneclaw-rs.git
+cd phoneclaw-rs
 cargo build --release
 ```
 
 ### 2.3 Create config
 
 ```bash
-mkdir -p ~/.pocketclaw
-mkdir -p ~/pocketclaw-workspace
+mkdir -p ~/.phoneclaw
+mkdir -p ~/phoneclaw-workspace
 
-cat > ~/.pocketclaw/config.json << 'JSON'
+cat > ~/.phoneclaw/config.json << 'JSON'
 {
-  "workspace": "/data/data/com.termux/files/home/pocketclaw-workspace",
+  "workspace": "/data/data/com.termux/files/home/phoneclaw-workspace",
   "agents": {
     "default": {
       "model": "gpt-4o-mini",
@@ -152,7 +152,7 @@ JSON
 ### 2.4 Run gateway
 
 ```bash
-./target/release/pocketclaw-cli gateway
+./target/release/phoneclaw-cli gateway
 ```
 
 ---
@@ -206,7 +206,7 @@ OpenRouter example:
 ## 5) Troubleshooting
 
 ### `Failed to load config`
-- Check `~/.pocketclaw/config.json` exists and valid JSON.
+- Check `~/.phoneclaw/config.json` exists and valid JSON.
 
 ### Android build error: `SDK location not found`
 - Set `ANDROID_HOME`, or create `android/local.properties` with `sdk.dir`.

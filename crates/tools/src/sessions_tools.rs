@@ -1,8 +1,8 @@
 use crate::{Tool, ToolError};
 use async_trait::async_trait;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::types::{Message, Role};
-use pocketclaw_persistence::SqliteSessionStore;
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::types::{Message, Role};
+use phoneclaw_persistence::SqliteSessionStore;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;

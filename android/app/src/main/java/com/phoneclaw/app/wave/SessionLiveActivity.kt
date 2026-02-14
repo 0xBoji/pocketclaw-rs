@@ -1,4 +1,4 @@
-package com.pocketclaw.app.wave
+package com.phoneclaw.app.wave
 
 import android.graphics.Typeface
 import android.os.Bundle

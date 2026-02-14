@@ -1,27 +1,27 @@
 [package]
-name = "pocketclaw-cli"
+name = "phoneclaw-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
-pocketclaw-agent = { workspace = true }
-pocketclaw-server = { workspace = true }
-pocketclaw-voice = { workspace = true }
-pocketclaw-cron = { workspace = true }
-pocketclaw-heartbeat = { workspace = true }
-pocketclaw-persistence = { workspace = true }
-pocketclaw-providers = { workspace = true }
-pocketclaw-tools = { workspace = true }
-pocketclaw-telegram = { workspace = true }
-pocketclaw-discord = { workspace = true }
-pocketclaw-whatsapp = { workspace = true }
-pocketclaw-slack = { workspace = true }
-pocketclaw-teams = { workspace = true }
-pocketclaw-zalo = { workspace = true }
-pocketclaw-googlechat = { workspace = true }
+phoneclaw-core = { workspace = true }
+phoneclaw-agent = { workspace = true }
+phoneclaw-server = { workspace = true }
+phoneclaw-voice = { workspace = true }
+phoneclaw-cron = { workspace = true }
+phoneclaw-heartbeat = { workspace = true }
+phoneclaw-persistence = { workspace = true }
+phoneclaw-providers = { workspace = true }
+phoneclaw-tools = { workspace = true }
+phoneclaw-telegram = { workspace = true }
+phoneclaw-discord = { workspace = true }
+phoneclaw-whatsapp = { workspace = true }
+phoneclaw-slack = { workspace = true }
+phoneclaw-teams = { workspace = true }
+phoneclaw-zalo = { workspace = true }
+phoneclaw-googlechat = { workspace = true }
 anyhow.workspace = true
 tokio.workspace = true
 clap = { version = "4.4", features = ["derive"] }

@@ -1,12 +1,12 @@
 [package]
-name = "pocketclaw-teams"
+name = "phoneclaw-teams"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
+phoneclaw-core = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 anyhow = { workspace = true }

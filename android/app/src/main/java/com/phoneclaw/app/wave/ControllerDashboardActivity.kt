@@ -1,4 +1,4 @@
-package com.pocketclaw.app.wave
+package com.phoneclaw.app.wave
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,7 +6,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.pocketclaw.app.PocketClawService
+import com.phoneclaw.app.PhoneClawService
 
 class ControllerDashboardActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
@@ -17,7 +17,7 @@ class ControllerDashboardActivity : AppCompatActivity() {
 
         store = AppConfigStore(this)
         if (!store.hasConfig()) {
-            startActivity(Intent(this, com.pocketclaw.app.SetupActivity::class.java))
+            startActivity(Intent(this, com.phoneclaw.app.SetupActivity::class.java))
             finish()
             return
         }
@@ -31,7 +31,7 @@ class ControllerDashboardActivity : AppCompatActivity() {
 
         val startBtn = UiFactory.actionButton(this, "Start Server")
         startBtn.setOnClickListener {
-            startService(Intent(this, PocketClawService::class.java))
+            startService(Intent(this, PhoneClawService::class.java))
             statusText.text = "Status: Running"
         }
         root.addView(startBtn)
@@ -40,7 +40,7 @@ class ControllerDashboardActivity : AppCompatActivity() {
 
         val stopBtn = UiFactory.secondaryButton(this, "Stop Server")
         stopBtn.setOnClickListener {
-            startService(Intent(this, PocketClawService::class.java).apply { action = "STOP" })
+            startService(Intent(this, PhoneClawService::class.java).apply { action = "STOP" })
             statusText.text = "Status: Stopped"
         }
         root.addView(stopBtn)

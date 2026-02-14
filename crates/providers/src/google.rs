@@ -1,6 +1,6 @@
 use super::{GenerationOptions, GenerationResponse, LLMProvider, ProviderError, Usage};
 use async_trait::async_trait;
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::types::{Message, Role};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;

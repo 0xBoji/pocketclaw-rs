@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::types::{Message, Role};
 use serde::Serialize;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use tracing::{info, instrument};

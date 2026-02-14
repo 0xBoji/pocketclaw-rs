@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use pocketclaw_core::types::{Message, Role};
+use phoneclaw_core::types::{Message, Role};
 use reqwest::{Client, Response};
 use serde::Deserialize;
 use serde_json::{json, Value};

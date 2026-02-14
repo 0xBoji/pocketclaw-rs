@@ -66,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
             // "Log rotation" implies we capture child output.
             // But complex to pipe child output to tracing.
             // Best to let child log to its own file using tracing-appender (Wave B3/C3 done elsewhere?).
-            // Agent logs to `~/.pocketclaw/logs`. Supervisor logs to `logs/supervisor.log`.
+            // Agent logs to `~/.phoneclaw/logs`. Supervisor logs to `logs/supervisor.log`.
             .spawn();
 
         let mut child = match child {

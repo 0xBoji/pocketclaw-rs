@@ -1,17 +1,17 @@
-package com.pocketclaw.app
+package com.phoneclaw.app
 
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
-import com.pocketclaw.app.wave.AppConfigStore
-import com.pocketclaw.app.wave.ChannelChatSetupActivity
-import com.pocketclaw.app.wave.ControllerDashboardActivity
-import com.pocketclaw.app.wave.ProviderSecretsActivity
-import com.pocketclaw.app.wave.ResourceMonitorActivity
-import com.pocketclaw.app.wave.SkillsPermissionsActivity
-import com.pocketclaw.app.wave.UiFactory
+import com.phoneclaw.app.wave.AppConfigStore
+import com.phoneclaw.app.wave.ChannelChatSetupActivity
+import com.phoneclaw.app.wave.ControllerDashboardActivity
+import com.phoneclaw.app.wave.ProviderSecretsActivity
+import com.phoneclaw.app.wave.ResourceMonitorActivity
+import com.phoneclaw.app.wave.SkillsPermissionsActivity
+import com.phoneclaw.app.wave.UiFactory
 
 class SetupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

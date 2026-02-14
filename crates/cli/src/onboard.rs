@@ -1,14 +1,14 @@
 use inquire::{Confirm, Password, Select, Text};
-use pocketclaw_core::config::{
+use phoneclaw_core::config::{
     AgentDefaultConfig, AgentsConfig, AnthropicConfig, AppConfig, DiscordConfig, GoogleConfig,
     GroqConfig, ProviderConfig, ProvidersConfig, TelegramConfig, WebConfig,
 };
-use pocketclaw_core::attachment::AttachmentPolicy;
+use phoneclaw_core::attachment::AttachmentPolicy;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn run_onboarding() -> anyhow::Result<()> {
-    println!("🦞 Welcome to PocketClaw Setup Wizard!");
+    println!("🦞 Welcome to PhoneClaw Setup Wizard!");
     println!("This wizard will help you generate a configuration file.\n");
 
     let workspace_str = Text::new("Where should the workspace be located?")
@@ -84,7 +84,7 @@ pub fn run_onboarding() -> anyhow::Result<()> {
 
     // --- Agents ---
     let _agent_name = Text::new("Name your agent:")
-        .with_default("PocketClaw")
+        .with_default("PhoneClaw")
         .prompt()?;
     let agent_prompt = Text::new("System Prompt:")
         .with_default("You are a helpful assistant.")
@@ -176,7 +176,7 @@ pub fn run_onboarding() -> anyhow::Result<()> {
     // Save config
     let config_path = dirs::home_dir()
         .unwrap()
-        .join(".pocketclaw/config.json");
+        .join(".phoneclaw/config.json");
     if let Some(parent) = config_path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -195,10 +195,10 @@ pub fn run_onboarding() -> anyhow::Result<()> {
     // Create workspace directories & templates
     create_workspace(&workspace)?;
 
-    println!("\n🦞 PocketClaw is ready!");
+    println!("\n🦞 PhoneClaw is ready!");
     println!("\nNext steps:");
     println!("  1. Review your config: {:?}", config_path);
-    println!("  2. Chat: pocketclaw agent -m \"Hello!\"");
+    println!("  2. Chat: phoneclaw agent -m \"Hello!\"");
 
     Ok(())
 }
@@ -229,7 +229,7 @@ You are a helpful AI assistant. Be concise, accurate, and friendly.
             "SOUL.md",
             r#"# Soul
 
-I am pocketclaw, a lightweight AI assistant powered by AI.
+I am phoneclaw, a lightweight AI assistant powered by AI.
 
 ## Personality
 

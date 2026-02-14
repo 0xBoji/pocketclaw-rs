@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.pocketclaw.app'
+    namespace 'com.phoneclaw.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.pocketclaw.app"
+        applicationId "com.phoneclaw.app"
         minSdk 26
         targetSdk 34
         versionCode 1

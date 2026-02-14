@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🦞 Building PocketClaw for Android..."
+echo "🦞 Building PhoneClaw for Android..."
 
 # Check requirements
 if ! command -v cargo-ndk &> /dev/null; then

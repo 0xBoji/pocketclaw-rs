@@ -19,25 +19,25 @@ debug = false        # No debug info
 
 [workspace.dependencies]
 # Local crates
-pocketclaw-core = { path = "crates/core" }
-pocketclaw-agent = { path = "crates/agent" }
-pocketclaw-providers = { path = "crates/providers" }
-pocketclaw-tools = { path = "crates/tools" }
-pocketclaw-skills = { path = "crates/skills" }
-pocketclaw-server = { path = "crates/server" }
-pocketclaw-cli = { path = "crates/cli" }
-pocketclaw-cron = { path = "crates/cron" }
-pocketclaw-voice = { path = "crates/voice" }
-pocketclaw-heartbeat = { path = "crates/heartbeat" }
-pocketclaw-persistence = { path = "crates/persistence" }
-pocketclaw-telegram = { path = "crates/telegram" }
-pocketclaw-discord = { path = "crates/discord" }
-pocketclaw-whatsapp = { path = "crates/whatsapp" }
-pocketclaw-slack = { path = "crates/slack" }
-pocketclaw-teams = { path = "crates/teams" }
-pocketclaw-zalo = { path = "crates/zalo" }
-pocketclaw-googlechat = { path = "crates/googlechat" }
-pocketclaw-supervisor = { path = "crates/supervisor" }
+phoneclaw-core = { path = "crates/core" }
+phoneclaw-agent = { path = "crates/agent" }
+phoneclaw-providers = { path = "crates/providers" }
+phoneclaw-tools = { path = "crates/tools" }
+phoneclaw-skills = { path = "crates/skills" }
+phoneclaw-server = { path = "crates/server" }
+phoneclaw-cli = { path = "crates/cli" }
+phoneclaw-cron = { path = "crates/cron" }
+phoneclaw-voice = { path = "crates/voice" }
+phoneclaw-heartbeat = { path = "crates/heartbeat" }
+phoneclaw-persistence = { path = "crates/persistence" }
+phoneclaw-telegram = { path = "crates/telegram" }
+phoneclaw-discord = { path = "crates/discord" }
+phoneclaw-whatsapp = { path = "crates/whatsapp" }
+phoneclaw-slack = { path = "crates/slack" }
+phoneclaw-teams = { path = "crates/teams" }
+phoneclaw-zalo = { path = "crates/zalo" }
+phoneclaw-googlechat = { path = "crates/googlechat" }
+phoneclaw-supervisor = { path = "crates/supervisor" }
 
 # Async Runtime
 tokio = { version = "1.36", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] } # Minimal features

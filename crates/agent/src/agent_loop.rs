@@ -1,16 +1,16 @@
 use crate::context::ContextBuilder;
 use crate::session::SessionManager;
-use pocketclaw_core::bus::{Event, MessageBus};
-use pocketclaw_core::config::AppConfig;
-use pocketclaw_core::types::{Message, Role};
-use pocketclaw_providers::{GenerationOptions, LLMProvider};
-use pocketclaw_tools::registry::ToolRegistry;
+use phoneclaw_core::bus::{Event, MessageBus};
+use phoneclaw_core::config::AppConfig;
+use phoneclaw_core::types::{Message, Role};
+use phoneclaw_providers::{GenerationOptions, LLMProvider};
+use phoneclaw_tools::registry::ToolRegistry;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 use serde_json::json;
-use pocketclaw_core::audit::log_audit_internal;
-use pocketclaw_core::metrics::MetricsStore;
+use phoneclaw_core::audit::log_audit_internal;
+use phoneclaw_core::metrics::MetricsStore;
 use tokio::sync::RwLock;
 
 /// Maximum tool-call loop iterations before the agent stops.
@@ -76,7 +76,7 @@ impl AgentLoop {
         messages: &[Message],
         tool_defs: &[serde_json::Value],
         options: &GenerationOptions,
-    ) -> Result<pocketclaw_providers::GenerationResponse, String> {
+    ) -> Result<phoneclaw_providers::GenerationResponse, String> {
         let mut last_error = String::new();
 
         for attempt in 0..LLM_RETRIES {

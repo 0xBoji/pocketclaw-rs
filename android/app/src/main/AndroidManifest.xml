@@ -8,10 +8,10 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="PocketClaw"
+        android:label="PhoneClaw"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PocketClaw">
+        android:theme="@style/Theme.PhoneClaw">
         
         <activity
             android:name=".MainActivity"
@@ -54,13 +54,13 @@
             android:exported="false" />
 
         <service
-            android:name=".PocketClawService"
+            android:name=".PhoneClawService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <service
-            android:name=".PocketClawAccessibilityService"
+            android:name=".PhoneClawAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:label="@string/accessibility_service_label"
             android:exported="true">

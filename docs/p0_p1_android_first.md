@@ -1,4 +1,4 @@
-# PocketClaw Android-First P0/P1 Plan
+# PhoneClaw Android-First P0/P1 Plan
 
 ## P0 (must-have)
 

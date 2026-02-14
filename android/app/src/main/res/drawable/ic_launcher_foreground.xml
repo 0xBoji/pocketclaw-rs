@@ -6,5 +6,5 @@
     android:insetBottom="12dp">
     <bitmap
         android:gravity="center"
-        android:src="@drawable/branding_pocketclaw_logo" />
+        android:src="@drawable/branding_phoneclaw_logo" />
 </inset>

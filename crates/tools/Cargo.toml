@@ -1,14 +1,14 @@
 [package]
-name = "pocketclaw-tools"
+name = "phoneclaw-tools"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
-pocketclaw-cron = { path = "../cron" }
-pocketclaw-persistence = { workspace = true }
+phoneclaw-core = { workspace = true }
+phoneclaw-cron = { path = "../cron" }
+phoneclaw-persistence = { workspace = true }
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true

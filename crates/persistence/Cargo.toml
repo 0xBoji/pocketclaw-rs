@@ -1,12 +1,12 @@
 [package]
-name = "pocketclaw-persistence"
+name = "phoneclaw-persistence"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-pocketclaw-core = { workspace = true }
+phoneclaw-core = { workspace = true }
 anyhow.workspace = true
 async-trait.workspace = true
 chrono = { workspace = true }

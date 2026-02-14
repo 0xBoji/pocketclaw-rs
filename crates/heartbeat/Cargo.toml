@@ -1,5 +1,5 @@
 [package]
-name = "pocketclaw-heartbeat"
+name = "phoneclaw-heartbeat"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -9,5 +9,5 @@ license.workspace = true
 tokio = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
-pocketclaw-core = { workspace = true }
+phoneclaw-core = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
