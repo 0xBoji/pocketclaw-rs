@@ -16,6 +16,9 @@ impl WebFetchTool {
         Self {
             client: Client::builder()
                 .user_agent("PocketClaw/1.0")
+                .connect_timeout(std::time::Duration::from_secs(8))
+                .timeout(std::time::Duration::from_secs(20))
+                .redirect(reqwest::redirect::Policy::limited(5))
                 .build()
                 .unwrap_or_default(),
             sandbox,
@@ -93,7 +96,7 @@ impl Tool for WebFetchTool {
     }
 
     fn description(&self) -> &str {
-        "Fetch and extract the main content from a webpage."
+        "Fetch and extract content from a specific webpage URL. Do not use this as a search engine."
     }
 
     fn parameters(&self) -> Value {

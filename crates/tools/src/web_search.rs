@@ -17,7 +17,11 @@ impl WebSearchTool {
     pub fn new(api_key: String, sandbox: SandboxConfig) -> Self {
         Self {
             api_key,
-            client: Client::new(),
+            client: Client::builder()
+                .connect_timeout(std::time::Duration::from_secs(8))
+                .timeout(std::time::Duration::from_secs(15))
+                .build()
+                .unwrap_or_default(),
             sandbox,
         }
     }
@@ -43,6 +47,7 @@ struct BraveSearchResult {
 #[derive(Deserialize)]
 struct SearchArgs {
     query: String,
+    count: Option<usize>,
 }
 
 #[async_trait]
@@ -76,12 +81,13 @@ impl Tool for WebSearchTool {
         info!(query = %args.query, "Web search query");
 
         let url = "https://api.search.brave.com/res/v1/web/search";
+        let count = args.count.unwrap_or(5).clamp(1, 10).to_string();
         
         let res = self.client
             .get(url)
             .header("X-Subscription-Token", &self.api_key)
             .header("Accept", "application/json")
-            .query(&[("q", &args.query)])
+            .query(&[("q", args.query.as_str()), ("count", count.as_str())])
             .send()
             .await
             .map_err(|e| ToolError::ExecutionError(e.to_string()))?;
