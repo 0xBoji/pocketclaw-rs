@@ -1,6 +1,6 @@
 use crate::{GenerationOptions, GenerationResponse, LLMProvider, ProviderError, Usage};
 use async_trait::async_trait;
-use pocketclaw_core::types::Message;
+use pocketclaw_core::types::{Message, Role};
 use reqwest::Client;
 use serde_json::{json, Value};
 
@@ -32,11 +32,46 @@ impl LLMProvider for OpenAIProvider {
 
         let messages_json: Vec<Value> = messages
             .iter()
-            .map(|m| {
-                json!({
-                    "role": format!("{:?}", m.role).to_lowercase(),
-                    "content": m.content
-                })
+            .map(|m| match m.role {
+                Role::Tool => {
+                    let tool_call_id = m
+                        .metadata
+                        .get("tool_call_id")
+                        .cloned()
+                        .unwrap_or_default();
+                    json!({
+                        "role": "tool",
+                        "tool_call_id": tool_call_id,
+                        "content": m.content
+                    })
+                }
+                Role::Assistant => {
+                    if let Some(tool_calls_json) = m.metadata.get("tool_calls_json") {
+                        if let Ok(tool_calls) = serde_json::from_str::<Value>(tool_calls_json) {
+                            json!({
+                                "role": "assistant",
+                                "content": if m.content.is_empty() { Value::Null } else { json!(m.content) },
+                                "tool_calls": tool_calls
+                            })
+                        } else {
+                            json!({
+                                "role": "assistant",
+                                "content": m.content
+                            })
+                        }
+                    } else {
+                        json!({
+                            "role": "assistant",
+                            "content": m.content
+                        })
+                    }
+                }
+                _ => {
+                    json!({
+                        "role": format!("{:?}", m.role).to_lowercase(),
+                        "content": m.content
+                    })
+                }
             })
             .collect();
 

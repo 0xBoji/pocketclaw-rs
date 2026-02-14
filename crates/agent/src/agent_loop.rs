@@ -190,17 +190,35 @@ impl AgentLoop {
                 );
             }
 
+            let tool_calls = response.tool_calls.clone();
+            let mut assistant_msg = Message::new(
+                "agent",
+                &msg.session_key,
+                Role::Assistant,
+                &response.content,
+            );
+            if !tool_calls.is_empty() {
+                if let Ok(serialized) = serde_json::to_string(&tool_calls.iter().map(|tc| {
+                    json!({
+                        "id": tc.id.clone(),
+                        "type": "function",
+                        "function": {
+                            "name": tc.name.clone(),
+                            "arguments": tc.arguments.clone()
+                        }
+                    })
+                }).collect::<Vec<_>>()) {
+                    assistant_msg
+                        .metadata
+                        .insert("tool_calls_json".to_string(), serialized);
+                }
+            }
             // Add assistant response to context
-            current_messages.push(Message::new(
-                "agent", 
-                &msg.session_key, 
-                Role::Assistant, 
-                &response.content
-            ));
+            current_messages.push(assistant_msg);
             
             // If tool calls present
-            if !response.tool_calls.is_empty() {
-                for tool_call in response.tool_calls {
+            if !tool_calls.is_empty() {
+                for tool_call in tool_calls {
                     info!("Executing tool: {}", tool_call.name);
 
                     // Enforce Default Deny at execution time (Defense in Depth)
