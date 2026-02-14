@@ -10,10 +10,8 @@ import com.pocketclaw.app.wave.ChannelChatSetupActivity
 import com.pocketclaw.app.wave.ControllerDashboardActivity
 import com.pocketclaw.app.wave.ProviderSecretsActivity
 import com.pocketclaw.app.wave.ResourceMonitorActivity
-import com.pocketclaw.app.wave.SafetySandboxActivity
 import com.pocketclaw.app.wave.SkillsPermissionsActivity
 import com.pocketclaw.app.wave.UiFactory
-import com.pocketclaw.app.wave.WorkspaceCreatorActivity
 
 class SetupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,18 +22,15 @@ class SetupActivity : AppCompatActivity() {
 
         val (scroll, root) = UiFactory.screen(this)
         root.addView(UiFactory.title(this, "Wave D Controller Setup"))
-        root.addView(UiFactory.subtitle(this, "Hoan thien 7 man hinh dieu khien cho local Android gateway."))
+        root.addView(UiFactory.subtitle(this, "Bo man hinh toi gian cho Android cu."))
 
         root.addView(UiFactory.section(this, "Mandatory"))
-        root.addView(navButton("Screen 1: Workspace Creator", WorkspaceCreatorActivity::class.java))
         root.addView(navButton("Screen 2: Provider & Secrets", ProviderSecretsActivity::class.java))
         root.addView(navButton("Screen 3: Channel Chat Setup", ChannelChatSetupActivity::class.java))
 
         root.addView(UiFactory.section(this, "Operations"))
         root.addView(navButton("Screen 4: Skill Manifest Viewer & Permissions", SkillsPermissionsActivity::class.java))
-        root.addView(navButton("Screen 5: Agent Control Dashboard", ControllerDashboardActivity::class.java))
         root.addView(navButton("Screen 6: Resource & Log Monitor", ResourceMonitorActivity::class.java))
-        root.addView(navButton("Screen 7: Safety & Sandbox Toggles", SafetySandboxActivity::class.java))
 
         root.addView(UiFactory.spacer(this, 20))
         root.addView(UiFactory.hint(this, "Config path: ${store.configPath()}"))
