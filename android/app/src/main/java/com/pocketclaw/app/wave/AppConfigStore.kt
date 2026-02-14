@@ -57,11 +57,11 @@ Use the tools below when user asks to open apps or navigate UI:
 - `android_action`
 
 Workflow:
-1. `android_action` with `launch_app` and app name (example: facebook).
-2. If launch fails, use `android_action` with `home`.
-3. `android_screen` with `dump_hierarchy`.
-4. Find target app/button by text/content-desc.
-5. `android_action` with `click` on matched bounds.
+1. `android_action` with `home`.
+2. `android_screen` with `dump_hierarchy`.
+3. Find target app/button by text/content-desc.
+4. `android_action` with `click` on matched bounds.
+5. Repeat dump/click for next step.
 """
     }
 

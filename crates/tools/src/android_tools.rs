@@ -11,7 +11,6 @@ pub trait AndroidBridge: Send + Sync {
     async fn scroll(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Result<bool, String>;
     async fn back(&self) -> Result<bool, String>;
     async fn home(&self) -> Result<bool, String>;
-    async fn launch_app(&self, app: String) -> Result<bool, String>;
     async fn input_text(&self, text: String) -> Result<bool, String>;
     async fn dump_hierarchy(&self) -> Result<String, String>;
     async fn screenshot(&self) -> Result<Vec<u8>, String>;
@@ -96,7 +95,7 @@ impl Tool for AndroidActionTool {
     }
 
     fn description(&self) -> &str {
-        "Perform actions on the Android device (click, scroll, back, home, launch_app, input_text)."
+        "Perform actions on the Android device (click, scroll, back, home, input_text)."
     }
 
     fn parameters(&self) -> Value {
@@ -105,7 +104,7 @@ impl Tool for AndroidActionTool {
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["click", "scroll", "back", "home", "launch_app", "input_text"],
+                    "enum": ["click", "scroll", "back", "home", "input_text"],
                     "description": "The action to perform."
                 },
                 "x": { "type": "number", "description": "X coordinate (for click)" },
@@ -114,7 +113,6 @@ impl Tool for AndroidActionTool {
                 "y1": { "type": "number", "description": "Start Y (for scroll)" },
                 "x2": { "type": "number", "description": "End X (for scroll)" },
                 "y2": { "type": "number", "description": "End Y (for scroll)" },
-                "app": { "type": "string", "description": "App name or package to launch (for launch_app), e.g. facebook, telegram." },
                 "text": { "type": "string", "description": "Text to input (for input_text)" }
             },
             "required": ["action"]
@@ -139,10 +137,6 @@ impl Tool for AndroidActionTool {
             }
             "back" => self.bridge.back().await,
             "home" => self.bridge.home().await,
-            "launch_app" => {
-                let app = args["app"].as_str().ok_or(ToolError::InvalidArgs("app required".into()))?;
-                self.bridge.launch_app(app.to_string()).await
-            }
             "input_text" => {
                 let text = args["text"].as_str().ok_or(ToolError::InvalidArgs("text required".into()))?;
                 self.bridge.input_text(text.to_string()).await
