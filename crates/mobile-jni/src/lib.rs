@@ -47,6 +47,20 @@ impl AndroidBridge for AndroidBridgeImpl {
         self.call_bool_method("performHome", "()Z", &[])
     }
 
+    async fn launch_app(&self, app: String) -> Result<bool, String> {
+        let mut env = self.vm.attach_current_thread_permanently().map_err(|e| e.to_string())?;
+        let japp = env.new_string(app).map_err(|e| e.to_string())?;
+        let result = env
+            .call_static_method(
+                &self.bridge_class,
+                "performLaunchApp",
+                "(Ljava/lang/String;)Z",
+                &[(&japp).into()],
+            )
+            .map_err(|e| e.to_string())?;
+        result.z().map_err(|e| e.to_string())
+    }
+
     async fn input_text(&self, text: String) -> Result<bool, String> {
         let mut env = self.vm.attach_current_thread_permanently().map_err(|e| e.to_string())?;
         let jtext = env.new_string(text).map_err(|e| e.to_string())?;
