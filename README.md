@@ -15,25 +15,24 @@ Primary goal: user only needs to set `provider + api key + model`, then start th
 
 Measured on the same machine (`Darwin arm64`, 2026-02-15) with release builds:
 
-| Metric | PhoneClaw | PicoClaw |
-| --- | ---: | ---: |
-| Binary size (CLI release) | **~14 MB** | ~16 MB |
-| CLI startup (`status`, warm) | **0.00-0.03s** | 0.00-0.01s |
-| Gateway idle RSS (~4s) | ~21.2 MB | **~16.8 MB** |
+| Metric | PhoneClaw |
+| --- | ---: |
+| Binary size (CLI release) | **~14 MB** |
+| CLI startup (`status`, warm) | **0.00-0.03s** |
+| Gateway idle RSS (~4s) | **~21.2 MB** |
 
 Notes:
 - PhoneClaw run included gateway subsystems (cron/heartbeat/metrics) enabled.
-- PicoClaw values shown for same host and method, to give practical baseline.
 
-## Feature Matrix
+## Core Features
 
-| Category | PhoneClaw | PicoClaw |
-| --- | --- | --- |
-| Runtime | Rust + Tokio/Axum | Go |
-| Android native app UI | Yes | No |
-| Channels | Telegram, Discord, Slack, WhatsApp, Teams, Zalo, Google Chat | Telegram, Discord, Slack, WhatsApp, QQ, DingTalk, Feishu, MaixCam |
-| Provider config surface | OpenAI, OpenRouter, Anthropic, Google, Groq | Anthropic, OpenAI, OpenRouter, Groq, Zhipu, VLLM, Gemini, Nvidia, Moonshot |
-| Default tool posture | Security-hardened (reduced high-privilege tools) | Power-user tooling (shell/fs/edit/spawn/web/cron) |
+| Category | PhoneClaw |
+| --- | --- |
+| Runtime | Rust + Tokio/Axum |
+| Android native app UI | Yes |
+| Channels | Telegram, Discord, Slack, WhatsApp, Teams, Zalo, Google Chat |
+| Provider config surface | OpenAI, OpenRouter, Anthropic, Google, Groq |
+| Default tool posture | Security-hardened (reduced high-privilege tools) |
 
 ## Supported Usage Modes (Android only)
 
