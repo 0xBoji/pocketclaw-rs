@@ -25,6 +25,70 @@ Measured on the same machine (`Darwin arm64`, 2026-02-15) with release builds:
 Notes:
 - PhoneClaw run included gateway subsystems (cron/heartbeat/metrics) enabled.
 
+## Speed Tuning (Old Android)
+
+Use this checklist to reduce lag and memory pressure on old phones.
+
+### 1) Pick a fast/cheap model first
+
+- Prefer lightweight models for daily chat:
+  - `gpt-4o-mini`
+  - `claude-3-5-haiku-latest`
+  - `gemini-2.0-flash`
+- Keep `max_tokens` moderate (`512-2048`) unless you really need long outputs.
+
+### 2) Keep runtime concurrency low
+
+In `~/.phoneclaw/config.json`, tune runtime for stability:
+
+```json
+{
+  "runtime": {
+    "adapter_max_inflight": 1,
+    "adapter_retry_jitter_ms": 120,
+    "ws_heartbeat_secs": 20,
+    "health_window_minutes": 15,
+    "dedupe_max_entries": 512
+  }
+}
+```
+
+Why this helps:
+- Lower inflight work => lower RAM spikes.
+- Smaller dedupe cache => less memory retained.
+- Less frequent heartbeat => lower idle CPU wakeups.
+
+### 3) Enable only channels you actually use
+
+Every active adapter adds background work.
+If you only need Telegram, keep only Telegram configured and remove unused channel configs.
+
+### 4) Use Brave web search only when needed
+
+`web_search` is network-heavy compared to plain chat.
+For fast replies, avoid search unless user asks for latest/news/live information.
+
+### 5) Prefer release builds
+
+Always run release binaries:
+
+```bash
+cargo build --release -p phoneclaw-cli
+./target/release/phoneclaw-cli gateway
+```
+
+### 6) Measure before/after
+
+Use built-in diagnostics and monitor endpoints:
+
+```bash
+./target/release/phoneclaw-cli doctor
+curl http://127.0.0.1:8080/api/monitor/health
+curl http://127.0.0.1:8080/api/monitor/metrics
+```
+
+If monitor shows channel errors or degraded status, disable noisy channels first, then retest.
+
 ## Core Features
 
 | Category | PhoneClaw |
