@@ -148,6 +148,7 @@ struct AppState {
     slack_signing_secret: Option<String>,
     configured_channels: Vec<String>,
     runtime: GatewayRuntimeConfig,
+    started_at_ms: i64,
     channel_stats: Arc<tokio::sync::Mutex<HashMap<String, ChannelRuntimeStats>>>,
     dedupe_cache: Arc<tokio::sync::Mutex<DedupeCache>>,
 }
@@ -325,6 +326,7 @@ impl Gateway {
             slack_signing_secret: self.slack_signing_secret.clone(),
             configured_channels: self.configured_channels.clone(),
             runtime: self.runtime,
+            started_at_ms: now_ms_epoch(),
             channel_stats,
             dedupe_cache,
         };
@@ -343,6 +345,7 @@ impl Gateway {
             .route("/api/attachment", post(upload_attachment))
             .route("/api/control/reload", put(reload_config))
             .route("/api/monitor/metrics", get(get_metrics))
+            .route("/api/monitor/health", get(monitor_health))
             .route("/api/sessions", get(list_sessions))
             .route("/api/sessions/:session_key/messages", get(get_session_messages))
             .route("/api/sessions/send", post(send_session_message))
@@ -577,6 +580,74 @@ async fn get_metrics(
 ) -> Result<Json<MetricsSnapshot>, StatusCode> {
     check_auth(&state, &headers)?;
     Ok(Json(state.metrics.snapshot()))
+}
+
+async fn monitor_health(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, StatusCode> {
+    check_auth(&state, &headers)?;
+
+    let now_ms = now_ms_epoch();
+    let uptime_ms = (now_ms - state.started_at_ms).max(0);
+
+    let mut stats_lock = state.channel_stats.lock().await;
+    let window_minutes = state
+        .runtime
+        .health_window_minutes
+        .clamp(1, ROLLING_WINDOW_MINUTES);
+    let mut active_channels = 0usize;
+    for stats in stats_lock.values_mut() {
+        let activity = stats
+            .inbound_rolling_1h
+            .sum_recent_minutes(now_ms, window_minutes)
+            + stats
+                .outbound_rolling_1h
+                .sum_recent_minutes(now_ms, window_minutes);
+        if activity > 0 {
+            active_channels += 1;
+        }
+    }
+    let total_channel_errors: u64 = stats_lock.values().map(|s| s.error_count).sum();
+    drop(stats_lock);
+
+    let dedupe_entries = state.dedupe_cache.lock().await.entries.len();
+
+    let components = vec![
+        json!({
+            "name": "gateway",
+            "status": "ok",
+            "details": {
+                "uptime_ms": uptime_ms,
+                "ws_heartbeat_secs": state.runtime.ws_heartbeat_secs
+            }
+        }),
+        json!({
+            "name": "channels",
+            "status": if total_channel_errors > 0 { "degraded" } else { "ok" },
+            "details": {
+                "configured_channels": state.configured_channels.len(),
+                "active_channels_window": active_channels,
+                "error_count_total": total_channel_errors,
+                "window_minutes": window_minutes
+            }
+        }),
+        json!({
+            "name": "dedupe_cache",
+            "status": "ok",
+            "details": {
+                "entries": dedupe_entries,
+                "max_entries": state.runtime.dedupe_max_entries
+            }
+        }),
+    ];
+
+    Ok(Json(json!({
+        "status": if total_channel_errors > 0 { "degraded" } else { "ok" },
+        "version": "0.1.0",
+        "uptime_ms": uptime_ms,
+        "components": components
+    })))
 }
 
 async fn channel_health(

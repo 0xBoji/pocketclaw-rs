@@ -12,6 +12,10 @@ pub struct ReliableProvider {
     base_backoff_ms: u64,
 }
 
+pub struct FailoverProvider {
+    providers: Vec<(String, Arc<dyn LLMProvider>, Option<String>)>,
+}
+
 impl ReliableProvider {
     pub fn new(inner: Arc<dyn LLMProvider>, max_retries: u32, base_backoff_ms: u64) -> Self {
         Self {
@@ -36,6 +40,57 @@ impl ReliableProvider {
             }
             ProviderError::ConfigError(_) => false,
         }
+    }
+}
+
+impl FailoverProvider {
+    pub fn new(providers: Vec<(String, Arc<dyn LLMProvider>, Option<String>)>) -> Self {
+        Self { providers }
+    }
+}
+
+#[async_trait]
+impl LLMProvider for FailoverProvider {
+    async fn chat(
+        &self,
+        messages: &[Message],
+        tools: &[serde_json::Value],
+        options: &GenerationOptions,
+    ) -> Result<GenerationResponse, ProviderError> {
+        if self.providers.is_empty() {
+            return Err(ProviderError::ConfigError(
+                "no providers available for failover".to_string(),
+            ));
+        }
+
+        let mut failures = Vec::new();
+        for (name, provider, model_override) in &self.providers {
+            let mut provider_options = options.clone();
+            if let Some(model) = model_override {
+                provider_options.model = model.clone();
+            }
+            match provider.chat(messages, tools, &provider_options).await {
+                Ok(resp) => {
+                    if !failures.is_empty() {
+                        tracing::warn!(
+                            provider = name,
+                            previous_failures = failures.len(),
+                            "provider failover recovered"
+                        );
+                    }
+                    return Ok(resp);
+                }
+                Err(err) => {
+                    failures.push(format!("{name}: {err}"));
+                    tracing::warn!(provider = name, "provider failed, trying next");
+                }
+            }
+        }
+
+        Err(ProviderError::ApiError(format!(
+            "all providers failed; {}",
+            failures.join(" | ")
+        )))
     }
 }
 
@@ -74,4 +129,3 @@ impl LLMProvider for ReliableProvider {
         Err(last_err.unwrap_or_else(|| ProviderError::ApiError("unknown provider failure".into())))
     }
 }
-

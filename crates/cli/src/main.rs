@@ -63,6 +63,8 @@ enum Commands {
     Onboard,
     /// Show phoneclaw status
     Status,
+    /// Run diagnostics for config/provider/channel/gateway health
+    Doctor,
     /// Manage scheduled tasks
     Cron {
         #[command(subcommand)]
@@ -373,6 +375,10 @@ async fn main() -> anyhow::Result<()> {
             run_status();
             return Ok(());
         }
+        Some(Commands::Doctor) => {
+            run_doctor().await;
+            return Ok(());
+        }
         Some(Commands::Cron { action }) => {
             run_cron(action);
             return Ok(());
@@ -652,6 +658,83 @@ fn run_status() {
         Err(e) => {
             println!("Error loading config: {}", e);
         }
+    }
+}
+
+async fn run_doctor() {
+    let config_path = get_config_dir().join("config.json");
+    println!("🩺 phoneclaw doctor\n");
+
+    if !config_path.exists() {
+        println!("❌ Config not found: {}", config_path.display());
+        println!("   Run `phoneclaw onboard` first.");
+        return;
+    }
+    println!("✅ Config file: {}", config_path.display());
+
+    let config = match AppConfig::load(None) {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            println!("❌ Failed to load config: {}", err);
+            return;
+        }
+    };
+
+    if config.workspace.exists() {
+        println!("✅ Workspace: {}", config.workspace.display());
+    } else {
+        println!("❌ Workspace missing: {}", config.workspace.display());
+    }
+
+    let provider_count = usize::from(config.providers.openai.is_some())
+        + usize::from(config.providers.openrouter.is_some())
+        + usize::from(config.providers.anthropic.is_some())
+        + usize::from(config.providers.google.is_some())
+        + usize::from(config.providers.groq.is_some());
+    if provider_count > 0 {
+        println!("✅ Providers configured: {}", provider_count);
+    } else {
+        println!("❌ No providers configured");
+    }
+
+    let channels = config.configured_channels();
+    if channels.is_empty() {
+        println!("⚠️  No channels configured");
+    } else {
+        println!("✅ Channels configured: {}", channels.join(", "));
+    }
+
+    let auth_token = config.web.as_ref().and_then(|w| w.auth_token.clone());
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+    {
+        Ok(c) => c,
+        Err(err) => {
+            println!("❌ Failed to initialize HTTP client: {}", err);
+            return;
+        }
+    };
+
+    let base = "http://127.0.0.1:8080";
+    let mut req = client.get(format!("{base}/health"));
+    if let Some(token) = &auth_token {
+        req = req.bearer_auth(token);
+    }
+    match req.send().await {
+        Ok(resp) if resp.status().is_success() => println!("✅ Gateway health endpoint reachable"),
+        Ok(resp) => println!("❌ Gateway /health returned HTTP {}", resp.status()),
+        Err(err) => println!("❌ Gateway unreachable on 127.0.0.1:8080 ({})", err),
+    }
+
+    let mut req = client.get(format!("{base}/api/monitor/health"));
+    if let Some(token) = auth_token {
+        req = req.bearer_auth(token);
+    }
+    match req.send().await {
+        Ok(resp) if resp.status().is_success() => println!("✅ Monitor health endpoint reachable"),
+        Ok(resp) => println!("❌ Monitor health endpoint HTTP {}", resp.status()),
+        Err(err) => println!("❌ Monitor health endpoint unreachable ({})", err),
     }
 }
 
