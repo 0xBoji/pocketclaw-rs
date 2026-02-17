@@ -25,6 +25,23 @@ Measured on the same machine (`Darwin arm64`, 2026-02-15) with release builds:
 Notes:
 - PhoneClaw run included gateway subsystems (cron/heartbeat/metrics) enabled.
 
+## Recent Performance Improvements (2026-02-17)
+
+These are runtime improvements already implemented in PhoneClaw core:
+
+- Provider reliability + retry backoff:
+  - Added bounded retry/backoff for transient network, timeout, and 429 errors.
+  - Reduces "typing but no final response" under unstable mobile network.
+- Provider failover chain:
+  - If the current provider fails, PhoneClaw now tries the next configured provider automatically.
+  - Improves response success rate without manual app restart/reconfigure.
+- Lightweight health diagnostics:
+  - Added `phoneclaw doctor` for fast runtime checks (config/workspace/providers/channels/gateway).
+  - Added `GET /api/monitor/health` with component-level health snapshot.
+- Mobile-safe defaults:
+  - Retry policy is bounded (small retry count, capped backoff), avoiding runaway latency and CPU wakeups.
+  - Health snapshot and dedupe stats are exposed via lightweight JSON endpoint for low-overhead monitoring.
+
 ## Speed Tuning (Old Android)
 
 Use this checklist to reduce lag and memory pressure on old phones.
