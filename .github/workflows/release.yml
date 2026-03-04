@@ -65,15 +65,36 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Decode keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.jks
-
-      - name: Write signing properties
+      - name: Configure release signing (with safe fallback)
+        id: signing
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          printf 'RELEASE_STORE_FILE=../release.jks\n' >> local.properties
-          printf 'RELEASE_STORE_PASSWORD=%s\n' "${{ secrets.RELEASE_STORE_PASSWORD }}" >> local.properties
-          printf 'RELEASE_KEY_ALIAS=%s\n' "${{ secrets.RELEASE_KEY_ALIAS }}" >> local.properties
-          printf 'RELEASE_KEY_PASSWORD=%s\n' "${{ secrets.RELEASE_KEY_PASSWORD }}" >> local.properties
+          set -euo pipefail
+
+          if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ] || [ -z "${RELEASE_STORE_PASSWORD:-}" ] || [ -z "${RELEASE_KEY_ALIAS:-}" ] || [ -z "${RELEASE_KEY_PASSWORD:-}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Release signing secrets are missing. Building unsigned APK."
+            exit 0
+          fi
+
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > release.jks
+
+          if ! keytool -list -keystore release.jks -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null 2>&1; then
+            rm -f release.jks
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Keystore validation failed. Building unsigned APK."
+            exit 0
+          fi
+
+          printf 'RELEASE_STORE_FILE=../release.jks\n' > local.properties
+          printf 'RELEASE_STORE_PASSWORD=%s\n' "$RELEASE_STORE_PASSWORD" >> local.properties
+          printf 'RELEASE_KEY_ALIAS=%s\n' "$RELEASE_KEY_ALIAS" >> local.properties
+          printf 'RELEASE_KEY_PASSWORD=%s\n' "$RELEASE_KEY_PASSWORD" >> local.properties
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - name: Build release AAR
         run: ./gradlew :lib:assembleRelease
@@ -125,7 +146,7 @@ jobs:
           echo "commit=${ZC_COMMIT}" >> "$GITHUB_OUTPUT"
           echo "ZeroClaw upstream: v${ZC_VERSION} (${ZC_COMMIT})"
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -136,9 +157,19 @@ jobs:
           printf 'Built against [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) v%s (`%s`)\n\n' \
             "${{ steps.upstream.outputs.version }}" "${{ steps.upstream.outputs.commit }}" >> /tmp/release-notes.md
           cat /tmp/auto-notes.md >> /tmp/release-notes.md
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --notes-file /tmp/release-notes.md \
-            ${{ steps.prerelease.outputs.flag }} \
-            lib/build/outputs/aar/lib-release.aar \
-            app/build/outputs/apk/release/phoneclaw.apk
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            gh release edit "${{ steps.version.outputs.tag }}" \
+              --title "${{ steps.version.outputs.tag }}" \
+              --notes-file /tmp/release-notes.md
+            gh release upload "${{ steps.version.outputs.tag }}" \
+              lib/build/outputs/aar/lib-release.aar \
+              app/build/outputs/apk/release/phoneclaw.apk \
+              --clobber
+          else
+            gh release create "${{ steps.version.outputs.tag }}" \
+              --title "${{ steps.version.outputs.tag }}" \
+              --notes-file /tmp/release-notes.md \
+              ${{ steps.prerelease.outputs.flag }} \
+              lib/build/outputs/aar/lib-release.aar \
+              app/build/outputs/apk/release/phoneclaw.apk
+          fi
