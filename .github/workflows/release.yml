@@ -34,6 +34,13 @@ jobs:
       - name: Apply submodule patches
         run: if ls patches/*.patch 1>/dev/null 2>&1; then cd zeroclaw && git apply ../patches/*.patch; fi
 
+      - name: Ensure embedded web assets exist
+        run: |
+          mkdir -p zeroclaw/web/dist
+          if [ ! -f zeroclaw/web/dist/index.html ]; then
+            printf '%s\n' '<!doctype html><html><body>OpenClaw Web UI placeholder</body></html>' > zeroclaw/web/dist/index.html
+          fi
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -73,9 +80,6 @@ jobs:
 
       - name: Build release APK
         run: ./gradlew :app:assembleRelease
-
-      - name: Rename APK
-        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/phoneclaw.apk
 
       - name: Clean up signing material
         if: always()

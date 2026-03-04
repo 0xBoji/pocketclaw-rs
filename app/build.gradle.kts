@@ -116,6 +116,7 @@ fun wirePhoneclawApkName(variant: String) {
             val outDir = layout.buildDirectory.dir("outputs/apk/${variant.lowercase()}").get().asFile
             val sourceApk = outDir.listFiles()?.firstOrNull { it.name.endsWith(".apk") } ?: return@doLast
             sourceApk.copyTo(outDir.resolve("phoneclaw-${variant.lowercase()}.apk"), overwrite = true)
+            sourceApk.copyTo(outDir.resolve("phoneclaw.apk"), overwrite = true)
         }
     }
 }
