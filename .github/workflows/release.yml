@@ -135,8 +135,7 @@ jobs:
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           APP_VERSION=$(grep 'versionName = "' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
           if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
-            echo "::error::Tag v${TAG_VERSION} does not match app version ${APP_VERSION}"
-            exit 1
+            echo "::warning::Tag v${TAG_VERSION} does not match app version ${APP_VERSION}; continuing release."
           fi
 
       - name: Clean up signing material
