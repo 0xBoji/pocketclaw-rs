@@ -36,9 +36,9 @@ import com.zeroclaw.android.model.ServiceState
 import com.zeroclaw.android.util.LogSanitizer
 import com.zeroclaw.ffi.FfiException
 import com.zeroclaw.ffi.validateConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
