@@ -1,18 +1,17 @@
-# ZeroClaw-Android: Run AI Agents 24/7 on Your Phone
+# PhoneClaw: Run AI Agents 24/7 on Your Phone
 
 ![Legacy PhoneClaw Logo](assets/phoneclaw-legacy-logo.png)
 
 > Your old phone in a drawer is a better AI server than you think.
 
-[![CI](https://github.com/Natfii/ZeroClaw-Android/actions/workflows/ci.yml/badge.svg)](https://github.com/Natfii/ZeroClaw-Android/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![API 26+](https://img.shields.io/badge/API-26%2B-brightgreen.svg)](https://developer.android.com/about/versions/oreo)
 [![Latest Release](https://img.shields.io/github/v/release/0xboji/PhoneClaw?include_prereleases&label=release)](https://github.com/0xboji/PhoneClaw/releases)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Rust](https://img.shields.io/badge/Rust-stable-DEA584.svg?logo=rust&logoColor=white)](https://www.rust-lang.org)
-[![Providers](https://img.shields.io/badge/Providers-32%2B-blue.svg)](https://github.com/Natfii/ZeroClaw-Android#supported-providers)
+[![Providers](https://img.shields.io/badge/Providers-32%2B-blue.svg)](https://github.com/0xboji/PhoneClaw-Android#supported-providers)
 
-ZeroClaw-Android turns your Android phone into an always-on AI agent host. Not a Termux hack. Not a WebView. Native Rust compiled to ARM. Connect to 32+ providers -- OpenAI, Claude, Gemini, Groq, DeepSeek, Ollama, LM Studio, vLLM, Novita, Telnyx, and more -- and run autonomous agents around the clock with encrypted API key storage (AES-256-GCM) and a battery-optimized foreground service. No server required. No cloud bills. Just your phone.
+PhoneClaw turns your Android phone into an always-on AI agent host. Not a Termux hack. Not a WebView. Native Rust compiled to ARM. Connect to 32+ providers -- OpenAI, Claude, Gemini, Groq, DeepSeek, Ollama, LM Studio, vLLM, Novita, Telnyx, and more -- and run autonomous agents around the clock with encrypted API key storage (AES-256-GCM) and a battery-optimized foreground service. No server required. No cloud bills. Just your phone.
 
 ## Quick Start
 
@@ -25,7 +24,7 @@ Got an old phone? Give it a new job.
 
 The onboarding wizard walks you through all of this on first launch.
 
-***Disclaimer: This app is a personal project not associated with the ZeroClaw Labs team. It might break.***
+***Disclaimer: This app is a personal project not associated with the PhoneClaw Labs team. It might break.***
 
 ## Features
 
@@ -36,13 +35,13 @@ The onboarding wizard walks you through all of this on first launch.
 - **Battery-optimized** -- `START_STICKY` foreground service with OEM battery killer detection, auto-restart on boot, network transition handling
 - **Material You** -- dynamic color theming on Android 12+, adaptive navigation (bottom bar / rail / drawer), WCAG 2.2 AA accessibility
 - **Auto-restart** -- your agents survive reboot, survive task kill, survive sleep. Exponential backoff on failures.
-- **Rust core** -- ZeroClaw's router runs natively via UniFFI, with `catch_unwind` at every FFI boundary. No JNI crashes.
+- **Rust core** -- PhoneClaw's router runs natively via UniFFI, with `catch_unwind` at every FFI boundary. No JNI crashes.
 
 <!-- <img src="https://github.com/user-attachments/assets/9712875d-5650-43a4-9646-8aa4d4175291" alt="On Boarding" width="30%" /> <img src="https://github.com/user-attachments/assets/ae198cdc-2130-4b25-8e69-114468653777" alt="Nav" width="37.5%" /> <img src="https://github.com/user-attachments/assets/4f1dc8bb-8cf7-4ce3-8321-860060ab98f6" alt="Nav" width="30%" />  -->
 
 ## Terminal REPL
 
-The Terminal replaces the old Console with a command-line interface for interacting with the ZeroClaw daemon. Type natural language to chat with your agent, or use slash commands to access every gateway operation directly.
+The Terminal replaces the old Console with a command-line interface for interacting with the PhoneClaw daemon. Type natural language to chat with your agent, or use slash commands to access every gateway operation directly.
 
 ### How it works
 
@@ -61,7 +60,7 @@ Plain text (anything not starting with `/`) is routed as a chat message through 
 | Command | Description |
 |---|---|
 | `/status` | Show daemon status |
-| `/version` | Show ZeroClaw version |
+| `/version` | Show PhoneClaw version |
 | `/health [component]` | Health summary or component detail |
 | `/doctor` | Run diagnostic checks |
 | `/cost` | Total cost summary |
@@ -206,7 +205,7 @@ Kotlin/Compose UI on top, Rust engine underneath, connected through Mozilla UniF
 
 | Function                                      | Description                                     |
 | --------------------------------------------- | ----------------------------------------------- |
-| `start_daemon(config, dataDir, host, port)` | Start the ZeroClaw daemon with TOML config      |
+| `start_daemon(config, dataDir, host, port)` | Start the PhoneClaw daemon with TOML config      |
 | `stop_daemon()`                             | Signal shutdown and wait for all components     |
 | `get_status()`                              | Returns JSON health snapshot                    |
 | `send_message(msg)`                         | Send a message to the gateway, returns response |
@@ -230,11 +229,11 @@ Plus 28 additional functions for cost tracking, cron scheduling, events, health 
 
 | Project                                            | Description                        | Relationship                                                   |
 | -------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------- |
-| [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) | Rust-native AI agent framework     | Upstream core (git submodule)                                  |
-| OpenClaw                                           | TypeScript-based AI agent platform | ZeroClaw is a Rust-native rewrite of the OpenClaw architecture |
-| ZeroClaw-Android                                   | This project                       | Android wrapper with native FFI                                |
+| [PhoneClaw](https://github.com/PhoneClaw-labs/PhoneClaw) | Rust-native AI agent framework     | Upstream core (git submodule)                                  |
+| OpenClaw                                           | TypeScript-based AI agent platform | PhoneClaw is a Rust-native rewrite of the OpenClaw architecture |
+| PhoneClaw-Android                                   | This project                       | Android wrapper with native FFI                                |
 
-ZeroClaw-Android wraps the upstream ZeroClaw engine without modification. Nader Dabit has called ZeroClaw "insanely fast" -- this project brings that speed to Android as an always-on service.
+PhoneClaw-Android wraps the upstream PhoneClaw engine without modification. Nader Dabit has called PhoneClaw "insanely fast" -- this project brings that speed to Android as an always-on service.
 
 </details>
 
@@ -258,8 +257,8 @@ ZeroClaw-Android wraps the upstream ZeroClaw engine without modification. Nader 
 rustup target add aarch64-linux-android x86_64-linux-android
 
 # Clone with submodules
-git clone --recursive https://github.com/Natfii/ZeroClaw-Android.git
-cd ZeroClaw-Android
+git clone --recursive https://github.com/0xboji/phoneclaw.git
+cd phoneclaw
 
 # Set environment (adjust paths for your system)
 export JAVA_HOME="/path/to/jdk-17"
@@ -281,25 +280,13 @@ export ANDROID_HOME="/path/to/Android/Sdk"
 
 The Gradle build invokes `cargo-ndk` via [Gobley](https://github.com/aspect-build/gobley) to cross-compile the Rust FFI library and generate UniFFI Kotlin bindings. No manual Rust build step needed.
 
-### Project structure
-
-```
-ZeroClaw-Android/
-  app/                    Android app (Kotlin/Compose)
-  lib/                    Library module (AAR publishing)
-  zeroclaw/               Upstream ZeroClaw (git submodule)
-  zeroclaw-android/       Cargo workspace
-    zeroclaw-ffi/         UniFFI-annotated Rust facade
-  .github/workflows/      CI, upstream sync, release
-```
-
 </details>
 
 <details>
 <summary>FAQ</summary>
 
 **Does this run AI models on the phone itself?**
-Not directly. ZeroClaw-Android runs the agent *router* -- it manages which models to call, handles tool execution, and orchestrates multi-step workflows. Inference happens on the provider's servers (OpenAI, Claude, etc.) or on a local Ollama instance on your network.
+Not directly. PhoneClaw runs the agent *router* -- it manages which models to call, handles tool execution, and orchestrates multi-step workflows. Inference happens on the provider's servers (OpenAI, Claude, etc.) or on a local Ollama instance on your network.
 
 **How much battery does it use?**
 The foreground service is idle most of the time, waking only when an agent needs to act. Typical usage is 2-5% battery per day. The app detects battery saver mode and reduces animations and non-essential work.
@@ -317,7 +304,7 @@ Yes, if you connect to a local Ollama instance or use the Synthetic provider for
 Not yet. Distribution is via GitHub Releases for now. Google Play is on the roadmap, along with expanded plugin support and Tasker/automation integration.
 
 **Can I run multiple agents simultaneously?**
-Yes. ZeroClaw's router supports multiple agents with independent configurations, each connected to different providers if needed.
+Yes. PhoneClaw's router supports multiple agents with independent configurations, each connected to different providers if needed.
 
 </details>
 
@@ -329,5 +316,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 <!-- GitHub repo settings (not rendered):
   About/Description: Run AI agents 24/7 on your Android phone. Native Rust core, 32+ providers (OpenAI, Claude, Gemini, Groq, DeepSeek, Ollama, LM Studio, vLLM, Novita, Telnyx), encrypted key storage, plugin browser, Material You UI. Self-hosted alternative to Mac Mini setups. MIT licensed.
-  Topics: ai-agent, android, rust, openai, anthropic, self-hosted, llm, foreground-service, kotlin, ai-agent-framework, material-you, ollama, groq, deepseek, gemini, iot, mqtt, encrypted-storage, jetpack-compose, zeroclaw
+  Topics: ai-agent, android, rust, openai, anthropic, self-hosted, llm, foreground-service, kotlin, ai-agent-framework, material-you, ollama, groq, deepseek, gemini, iot, mqtt, encrypted-storage, jetpack-compose, PhoneClaw
 -->
